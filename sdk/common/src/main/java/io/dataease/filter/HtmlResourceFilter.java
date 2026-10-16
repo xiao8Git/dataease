@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -29,6 +31,9 @@ public class HtmlResourceFilter implements Filter, Ordered {
     @Value("${dataease.http.hsts:}")
     private String hsts;
 
+    @Autowired
+    private ObjectProvider<FramePolicyProvider> framePolicyProviders;
+
     @Override
     public int getOrder() {
         return 99;
@@ -48,10 +53,17 @@ public class HtmlResourceFilter implements Filter, Ordered {
             httpResponse.setHeader(HttpHeaders.PRAGMA, "no-cache");
             httpResponse.setHeader(HttpHeaders.EXPIRES, "0");
         }
-        if (frameOptions != null && !frameOptions.isBlank()) {
+        FramePolicyProvider provider = framePolicyProviders.getIfAvailable();
+        String managedPolicy = provider == null ? null : provider.frameAncestors();
+        if (managedPolicy != null && managedPolicy.equals("'self'")) {
+            httpResponse.setHeader("X-Frame-Options", "SAMEORIGIN");
+        } else if (managedPolicy == null && frameOptions != null && !frameOptions.isBlank()) {
             httpResponse.setHeader("X-Frame-Options", frameOptions);
         }
         String frameAncestorsValue = frameAncestors == null || frameAncestors.isBlank() ? "'self'" : frameAncestors;
+        if (managedPolicy != null) {
+            frameAncestorsValue = managedPolicy;
+        }
         httpResponse.setHeader("Content-Security-Policy", "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors " + frameAncestorsValue);
         httpResponse.setHeader("X-Content-Type-Options", "nosniff");
         httpResponse.setHeader("X-XSS-Protection", "1; mode=block");

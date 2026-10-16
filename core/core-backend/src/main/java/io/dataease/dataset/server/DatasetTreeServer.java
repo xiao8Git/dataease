@@ -70,7 +70,7 @@ public class DatasetTreeServer implements DatasetTreeApi {
     }
 
     public List<BusiNodeVO> tree(BusiNodeRequest request) {
-        return datasetGroupManage.tree(request);
+        return datasetGroupManage.treeForCurrentIdentity(request);
     }
 
     @Override
@@ -105,6 +105,10 @@ public class DatasetTreeServer implements DatasetTreeApi {
 
     @Override
     public void exportDataset(DataSetExportRequest request, HttpServletResponse response) throws Exception {
+        // Never accept scope identity from the request body.
+        String[] scope = io.dataease.share.manage.TicketScopeSql.captureExportScope();
+        request.setScopeTenant(scope[0]);
+        request.setScopeUser(scope[1]);
         boolean embeddedSyncExport = !StringUtils.equalsIgnoreCase(exportCenterManage.singleValue(XpackSettingConstants.EMBEDDED_EXPORT_MODE), "async");
         if (request.isDataEaseBi() && embeddedSyncExport) {
             exportCenterDownLoadManage.downloadDataset(request, response);

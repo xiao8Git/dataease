@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PreviewScopeSettings from '@/components/visualization/PreviewScopeSettings.vue'
 import icon_add_outlined from '@/assets/svg/icon_add_outlined.svg'
 import DeResourceTree from '@/views/common/DeResourceTree.vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
@@ -313,6 +314,10 @@ defineExpose({
           @reload="reload"
           @download="downloadH2"
           @downloadAsAppTemplate="downloadAsAppTemplate"
+        />
+        <PreviewScopeSettings
+          v-if="showPosition === 'preview'"
+          @apply="loadCanvasData(state.dvInfo.id, state.dvInfo.weight)"
         />
         <div
           ref="previewCanvasContainer"

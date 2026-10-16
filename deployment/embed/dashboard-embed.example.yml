@@ -1,0 +1,12 @@
+# Merge into the active DataEase mode's configuration, including distributed deployments.
+dataease:
+  embed:
+    required-shares:
+      - YOUR_SHARE_UUID
+    keys:
+      tenant-a-v1:
+        tenant: tenant-a
+        secret-base64: ${DASHBOARD_TENANT_A_KEY_BASE64}
+      tenant-b-v1:
+        tenant: tenant-b
+        secret-base64: ${DASHBOARD_TENANT_B_KEY_BASE64}

@@ -19,6 +19,7 @@ import { useI18n } from '@/hooks/web/useI18n'
 import Icon from '@/components/icon-custom/src/Icon.vue'
 import { useCache } from '@/hooks/web/useCache'
 import { useAppStoreWithOut } from '@/store/modules/app'
+import { useUserStoreWithOut } from '@/store/modules/user'
 
 const { t } = useI18n()
 const state = reactive({
@@ -390,7 +391,9 @@ defineExpose({
         <el-table-column
           v-if="!desktop"
           prop="orgName"
-          :label="t('data_set.organization')"
+          :label="
+            t(useUserStoreWithOut().localAccess ? 'local_access.tenant' : 'data_set.organization')
+          "
           width="200"
         />
         <el-table-column fixed="right" prop="operate" width="90" :label="$t('commons.operating')">

@@ -1,6 +1,8 @@
 package io.dataease.system.server;
 
 import io.dataease.api.system.SysParameterApi;
+import io.dataease.api.system.vo.IframeWhitelistVO;
+import io.dataease.system.manage.IframeWhitelistManage;
 import io.dataease.api.system.request.OnlineMapEditor;
 import io.dataease.api.system.request.SQLBotConfigCreator;
 import io.dataease.api.system.vo.SQLBotConfigVO;
@@ -26,9 +28,35 @@ import java.util.Map;
 @RestController
 @RequestMapping("/sysParameter")
 public class SysParameterServer implements SysParameterApi {
+    @Resource
+    private io.dataease.system.manage.EmbedKeyManage embedKeyManage;
+
+    @Override
+    public List<io.dataease.api.system.vo.EmbedKeyVO> embedKeys() {
+        return embedKeyManage.list();
+    }
+
+    @Override
+    public void saveEmbedKey(io.dataease.api.system.request.EmbedKeyEditor editor) {
+        embedKeyManage.save(editor);
+    }
+
 
     @Resource
     private SysParameterManage sysParameterManage;
+
+    @Resource
+    private IframeWhitelistManage iframeWhitelistManage;
+
+    @Override
+    public IframeWhitelistVO iframeWhitelist() {
+        return iframeWhitelistManage.query();
+    }
+
+    @Override
+    public void saveIframeWhitelist(List<String> origins, Boolean enabled) {
+        iframeWhitelistManage.save(origins, enabled);
+    }
 
     @Override
     public String singleVal(String key) {

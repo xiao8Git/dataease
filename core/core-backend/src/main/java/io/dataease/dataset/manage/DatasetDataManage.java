@@ -97,7 +97,7 @@ public class DatasetDataManage {
     private static Logger logger = LoggerFactory.getLogger(DatasetDataManage.class);
 
     private RowPermissionsApi getRowPermissionsApi() {
-        return rowPermissionsApi;
+        return io.dataease.localaccess.security.LocalAccessContext.get() == null ? rowPermissionsApi : null;
     }
 
     public static final List<String> notFullDs = List.of("mysql", "mariadb", "Excel", "API", "H2", "h2");

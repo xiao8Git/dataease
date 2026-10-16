@@ -1,4 +1,140 @@
 export default {
+  local_access: {
+    platform_admin: 'Platform administrator',
+    admin_scope: 'Platform administration (no tenant)',
+    title: 'Tenants and permissions',
+    description:
+      'Regular users belong to one tenant and role. Roles control tenant features. Administrators manage global features; the header tenant selects the data viewing scope.',
+    tenants: 'Tenants',
+    new_tenant: 'New tenant',
+    name: 'Name',
+    code: 'Tenant key',
+    status: 'Status',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    edit: 'Edit',
+    members_permissions: 'Users, roles and dashboards',
+    choose_tenant: 'Choose current tenant',
+    create_tenant_first: 'Create a tenant first',
+    roles: 'Roles and features',
+    new_role: 'New role',
+    features: 'Available features',
+    dashboard: 'View dashboards and screens',
+    dataset: 'Manage datasets',
+    datasource: 'Manage data sources',
+    users: 'Users',
+    new_user: 'New user',
+    account: 'Account',
+    role: 'Role',
+    data_user: 'Business user ID',
+    edit_user: 'Edit / reset password',
+    grants: 'Visible dashboards',
+    grant_help:
+      'Selected dashboards are available to this tenant. Queries always use the current tenant. An empty selection grants no dashboards.',
+    choose_dashboards: 'Select dashboards or screens',
+    save: 'Save',
+    saved: 'Saved',
+    tenant: 'Tenant',
+    user: 'User',
+    code_help: 'Must match tenant_id in business data. Cannot be changed after creation.',
+    data_user_help: 'Matches user_id in business data for existing user scope checks.',
+    password: 'Password',
+    password_help:
+      '12–128 characters. Leave blank when editing to retain the password. Saving invalidates existing sessions.',
+    cancel: 'Cancel'
+  },
+  embed_keys: {
+    title: 'Tenant signing keys',
+    help: 'Configure independent signing keys per tenant. Keep multiple key IDs during rotation, then disable the old key after switching the signing service.',
+    add: 'Add key',
+    tenant: 'Tenant ID',
+    status: 'Status',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    source: 'Source',
+    managed: 'Managed',
+    deployment: 'Configuration file',
+    actions: 'Actions',
+    edit: 'Edit',
+    secret: 'Base64 signing key',
+    generate: 'Generate random key',
+    keep_secret: 'Leave blank to keep the current key',
+    invalid_secret: 'Enter standard Base64 encoding of a 32–128 byte key.',
+    invalid_identity:
+      'kid: 1–64 letters, digits, underscores or hyphens. Tenant ID: 1–128 letters, digits or _ . : @ / -.',
+    identity_help:
+      'Key IDs are globally unique. Tenant and kid cannot change after saving; add a new kid to rotate.',
+    secret_help:
+      'Saved secrets show only the first and last 4 characters, with * masking the middle. Securely configure the new key in the tenant signing service before saving. Both services must use the same kid and secret.',
+    effect:
+      'Changes apply immediately to new link exchanges. Disabling does not revoke issued access tokens; they expire within 15 minutes.'
+  },
+  iframe_whitelist: {
+    enabled: 'Enable iframe origin validation',
+    toggle_help:
+      'When disabled, any website may embed DataEase. The allowlist is retained and applies again when enabled. Login, signature and tenant permission checks still apply.',
+    unrestricted: 'Origin validation disabled (any website may embed)',
+
+    title: 'iframe allowlist',
+    help: 'Allow these parent origins to embed DataEase in an iframe. When validation is enabled, same-origin embedding is always allowed. Save an empty list to block other sites. Sharing and user permissions still apply.',
+    deployment:
+      'Deployment settings are currently active. Saving replaces the deployment embedding policy with this allowlist.',
+    current: 'Current embedding policy',
+    origins: 'Allowed origins (one per line, up to 50)',
+    placeholder: 'https://portal.example.com\nhttp://portal.example.com:15000',
+    effect:
+      'Enter HTTP(S), a hostname or IP, and an optional port. Paths, queries and wildcards are not supported. Changes take effect within 5 seconds; reload the embedded page.',
+    invalid:
+      'Enter up to 50 HTTP(S) origins, one per line, without paths, queries, credentials or wildcards.'
+  },
+  field_order: { title: 'Column order', up: 'Move up', down: 'Move down' },
+  preview_scope: {
+    title: 'Preview scope',
+    apply: 'Apply and load',
+    clear: 'Clear',
+    hint: 'Temporary administrator preview; not saved to configuration',
+    active: 'Preview active',
+    invalid:
+      'Enter tenant and user IDs using letters, digits or _ . : @ / - (up to 128 characters).'
+  },
+  tenant_sql_check: {
+    shared_title: 'Shared dataset: SQL must work for every tenant',
+    shared_hint:
+      "Do not hard-code tenant IDs, user IDs, business record IDs such as course IDs, or tenant-specific constants. Use current identity parameters for tenant and user filters, and parameters or joins for other business conditions. Example: tenant_id = '__DE_TICKET_TENANT__'; use '__DE_TICKET_USER__' for user filters.",
+    preview_title: 'Run preview parameters (this editing session only)',
+    preview_tenant: 'Tenant ID; empty means NULL',
+    preview_user: 'User ID; empty means NULL',
+    preview_hint:
+      'Confirm to use these values with Run. Only the preview request is changed; values are not saved to the dataset and are cleared when the editor closes. Shared dashboards still use the verified ticket.',
+    preview_invalid: 'Use letters, digits or _ . : @ / - only, up to 128 characters.',
+
+    covered: 'Tenant covered',
+    missing: 'Tenant unconfirmed',
+    hint: 'Static check: green means linked to a tenant value or parameter; red means unconfirmed. Supports equality, IN and tenant joins. Complex syntax may need manual review; this is not server authorization.',
+    parse_failed:
+      'Incomplete or unsupported SQL: tenant conditions cannot be confirmed; table names are red.',
+    incomplete: 'Analysis incomplete',
+    parameters: 'Tenant and user parameters',
+    tenant_description:
+      "Tenant identity limits data to its tenant. The shared dashboard replaces the quoted SQL placeholder '__DE_TICKET_TENANT__' with the server-verified tenant.",
+    user_description:
+      "Viewer identity resolves managed organizations and descendants within that tenant. It does not restrict records to the viewer alone. Use the quoted SQL placeholder '__DE_TICKET_USER__'.",
+    scope_description:
+      'These reserved placeholders use the verified share token and need no ordinary variable configuration below. Without that token they resolve to NULL. Table colors check tenant_id only, not user scope.'
+  },
+  dataset_sql_format: {
+    action: 'Format SQL',
+    failed:
+      'Unable to format this SQL. Check the syntax or datasource dialect. The original text has been preserved.'
+  },
+  url_parameters: {
+    enabled: 'Show URL parameters',
+    fields: 'Fields to display',
+    placeholder: 'Select or type a field name and press Enter',
+    hint: 'Save and publish to apply to shared and embedded pages. No parameter values are shown when no fields are selected.',
+    title: 'Access URL parameters',
+    empty: 'No matching parameters to display'
+  },
   share_visitor: {
     no_permission: 'You do not have this permission',
     title: 'Visitor permissions',

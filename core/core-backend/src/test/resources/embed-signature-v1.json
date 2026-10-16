@@ -1,0 +1,5 @@
+{
+  "keyBase64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  "canonical": "DE-EMBED-V1\ntest-key\nshare-1\nticket%2F%2B%25\ntenant-a\nuser%2Fa%40b\n1700000000\n1700000300\nnonce-0123456789abcdef",
+  "signature": "jJIxxz8GhOeJB2MDF5xA04fjO_hlGHqfwolxJ1Cm1_s"
+}

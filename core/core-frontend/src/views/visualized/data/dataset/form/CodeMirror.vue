@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { tenantSqlHighlight } from './tenantSqlHighlight'
+import { useI18n } from '@/hooks/web/useI18n'
 import { sql } from '@codemirror/lang-sql'
 import { basicSetup } from 'codemirror'
 import { indentWithTab } from '@codemirror/commands'
@@ -13,6 +15,7 @@ import {
 import { propTypes } from '@/utils/propTypes'
 
 const props = defineProps({
+  tenantCheck: propTypes.bool.def(false),
   domId: propTypes.string.def('editor'),
   height: propTypes.string.def('250px'),
   quotaMap: propTypes.arrayOf(String).def(() => []),
@@ -22,7 +25,8 @@ const props = defineProps({
     default: /\[(.*?)\]/g
   }
 })
-const emits = defineEmits(['change'])
+const emits = defineEmits(['change', 'tenantCheck'])
+const { t } = useI18n()
 
 const codeComInit = (doc: string, sqlMode?: boolean) => {
   function _optionalChain(ops) {
@@ -121,6 +125,12 @@ const codeComInit = (doc: string, sqlMode?: boolean) => {
         basicSetup,
         sql(),
         placeholders,
+        ...(props.tenantCheck
+          ? tenantSqlHighlight(result => emits('tenantCheck', result), {
+              covered: t('tenant_sql_check.covered'),
+              missing: t('tenant_sql_check.missing')
+            })
+          : []),
         keymap.of([indentWithTab]),
         EditorView.updateListener.of(v => {
           if (v.docChanged) {

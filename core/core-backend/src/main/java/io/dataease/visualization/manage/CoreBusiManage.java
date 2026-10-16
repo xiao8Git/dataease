@@ -26,15 +26,18 @@ public class CoreBusiManage {
 
     public Map<String, List<BusiNodeVO>> interactiveTree(Map<String, BusiNodeRequest> requestMap) {
         Map<String, List<BusiNodeVO>> result = new HashMap<>();
+        var local = io.dataease.localaccess.security.LocalAccessContext.get();
+        if (local != null && !local.admin() && local.tenantId() == null) return result;
         for (Map.Entry<String, BusiNodeRequest> entry : requestMap.entrySet()) {
             BusiNodeRequest busiNodeRequest = entry.getValue();
             String key = entry.getKey();
+            if (local != null && !local.permits(StringUtils.equalsAnyIgnoreCase(key, "dashboard", "dataV") ? "dashboard" : key)) continue;
             if (StringUtils.equalsIgnoreCase(key, "datasource")) {
-                result.put(key, dataSourceManage.tree(busiNodeRequest));
+                result.put(key, dataSourceManage.treeForCurrentIdentity(busiNodeRequest));
             } else if (StringUtils.equalsIgnoreCase(key, "dataset")) {
-                result.put(key, datasetGroupManage.tree(busiNodeRequest));
+                result.put(key, datasetGroupManage.treeForCurrentIdentity(busiNodeRequest));
             } else if (StringUtils.equalsAnyIgnoreCase(key, "dashboard", "dataV")) {
-                result.put(key, coreVisualizationManage.tree(busiNodeRequest));
+                result.put(key, coreVisualizationManage.treeForCurrentIdentity(busiNodeRequest));
             }
         }
         return result;

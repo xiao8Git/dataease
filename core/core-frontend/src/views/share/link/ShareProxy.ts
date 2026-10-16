@@ -80,11 +80,19 @@ class ShareProxy {
     const url = '/share/proxyInfo'
     const inIframe = isInIframe()
     const ticket = this.getTicket()
-    const param = { uuid, ciphertext: null, inIframe, ticket }
+    const href = window.location.href
+    const params = new URLSearchParams(href.substring(getParamIndex(href) + 1))
+    const signedContext: Record<string, string> = {}
+    for (const key of ['tenant_id', 'user_id', 'iat', 'exp', 'nonce', 'kid', 'sig']) {
+      if (params.has(key)) signedContext[key] = params.get(key)
+    }
+    const param = { uuid, ciphertext: null, inIframe, ticket, ...signedContext }
     const ciphertext = wsCache.get(`link-${uuid}`)
     if (ciphertext) {
       param['ciphertext'] = ciphertext
     }
+    // Do not reuse a previous user scope if this exchange fails.
+    useLinkStoreWithOut().setLinkToken('')
     const res = await request.post({ url, data: param })
     const proxyInfo: ProxyInfo = res.data as ProxyInfo
     if (

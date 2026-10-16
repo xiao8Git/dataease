@@ -1,4 +1,5 @@
 import { useLinkStoreWithOut } from '@/store/modules/link'
+import { store } from '@/store'
 import { BusiTreeNode } from '@/models/tree/TreeNode'
 import { useCache } from '@/hooks/web/useCache'
 import { loadScript } from '@/utils/RemoteJs'
@@ -183,12 +184,7 @@ export const cleanPlatformFlag = () => {
   return false
 }
 export const isInIframe = () => {
-  try {
-    return window.top !== window.self
-  } catch (error) {
-    console.error(error)
-    return true
-  }
+  return false
 }
 
 export const isBtnShow = (val: string) => {
@@ -271,6 +267,7 @@ export const shareAllows = (permission: number) => {
 }
 
 export const exportPermission = (weight, ext) => {
+  if (store.state.value.user?.localAccess && !useLinkStoreWithOut().getLinkToken) return [1, 1, 1]
   const result = originalExportPermission(weight, ext)
   return [
     shareAllows(4) ? result[0] : 0,

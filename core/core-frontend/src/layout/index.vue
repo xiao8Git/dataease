@@ -10,6 +10,7 @@ import { ElContainer } from 'element-plus-secondary'
 import { useRoute } from 'vue-router_2'
 import { XpackComponent } from '@/components/plugin'
 import { useI18n } from '@/hooks/web/useI18n'
+import { useUserStoreWithOut } from '@/store/modules/user'
 const route = useRoute()
 const systemMenu = computed(() => route.path.includes('system'))
 const settingMenu = computed(() => route.path.includes('sys-setting'))
@@ -67,7 +68,10 @@ const { t } = useI18n()
       ></Main>
     </el-container>
   </div>
-  <XpackComponent jsname="L2NvbXBvbmVudC9sb2dpbi9Qd2RJbnZhbGlkVGlwcw==" />
+  <XpackComponent
+    v-if="!useUserStoreWithOut().localAccess"
+    jsname="L2NvbXBvbmVudC9sb2dpbi9Qd2RJbnZhbGlkVGlwcw=="
+  />
 </template>
 
 <style lang="less" scoped>

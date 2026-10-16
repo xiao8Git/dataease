@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UrlParametersSetting from '@/components/visualization/UrlParametersSetting.vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { snapshotStoreWithOut } from '@/store/modules/data-visualization/snapshot'
 import { storeToRefs } from 'pinia'
@@ -122,6 +123,9 @@ const saveSelfSubject = () => {
           <el-button class="button-panel__style" text size="small" @click="saveSelfSubject">
             {{ $t('commons.save') }}
           </el-button>
+        </el-collapse-item>
+        <el-collapse-item :title="t('url_parameters.title')" name="urlParameters">
+          <url-parameters-setting />
         </el-collapse-item>
         <el-collapse-item :title="t('components.overall_configuration')" name="overallSetting">
           <overall-setting @onThemeColorChange="themeColorChange" />

@@ -65,6 +65,7 @@ public class SqlparserUtils {
         if (StringUtils.isEmpty(sql)) {
             DEException.throwException(Translator.get("i18n_sql_not_empty"));
         }
+        sql = io.dataease.share.manage.TicketScopeSql.bind(sql);
         validateParameterNames(sql, regex);
         Pattern r = Pattern.compile(deVariablePattern);
         Matcher m = r.matcher(sql);

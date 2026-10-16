@@ -75,6 +75,15 @@ public class CoreVisualizationManage {
 
     @XpackInteract(value = "visualizationResourceTree", replace = true, invalid = true)
     public List<BusiNodeVO> tree(BusiNodeRequest request) {
+        return communityTree(request);
+    }
+
+    public List<BusiNodeVO> treeForCurrentIdentity(BusiNodeRequest request) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) return communityTree(request);
+        return io.dataease.utils.CommonBeanFactory.getBean(CoreVisualizationManage.class).tree(request);
+    }
+
+    private List<BusiNodeVO> communityTree(BusiNodeRequest request) {
         List<VisualizationNodeBO> nodes = new ArrayList<>();
         if (ObjectUtils.isEmpty(request.getLeaf()) || !request.getLeaf()) {
             nodes.add(rootNode());
@@ -182,6 +191,10 @@ public class CoreVisualizationManage {
         visualizationInfo.setUpdateTime(System.currentTimeMillis());
         visualizationInfo.setOrgId(AuthUtils.getUser().getDefaultOid());
         mapper.insert(visualizationInfo);
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) {
+            CommonBeanFactory.getBean(io.dataease.localaccess.manage.LocalAccessManage.class)
+                    .createdDashboard(visualizationInfo.getId(), visualizationInfo.getNodeType());
+        }
         // 镜像文件插入
         SnapshotDataVisualizationInfo snapshotVisualizationInfo = new SnapshotDataVisualizationInfo();
         BeanUtils.copyBean(snapshotVisualizationInfo, visualizationInfo);
@@ -214,16 +227,21 @@ public class CoreVisualizationManage {
         coreOptRecentManage.saveOpt(visualizationInfo.getId(), OptConstants.OPT_RESOURCE_TYPE.VISUALIZATION, OptConstants.OPT_TYPE.UPDATE);
     }
 
+    private int localWeight(int original) {
+        var local = io.dataease.localaccess.security.LocalAccessContext.get();
+        return local != null && !local.admin() ? 1 : original;
+    }
+
     private boolean isTopNode(Long pid) {
         return ObjectUtils.isEmpty(pid) || pid.equals(0L);
     }
 
     private VisualizationNodeBO rootNode() {
-        return new VisualizationNodeBO(0L, "root", false, 7, -1L, 0, 1);
+        return new VisualizationNodeBO(0L, "root", false, localWeight(7), -1L, 0, 1);
     }
 
     private VisualizationNodeBO convert(VisualizationNodePO po) {
-        return new VisualizationNodeBO(po.getId(), po.getName(), StringUtils.equals(po.getNodeType(), "leaf"), 9, po.getPid(), po.getExtraFlag(), po.getExtraFlag1());
+        return new VisualizationNodeBO(po.getId(), po.getName(), StringUtils.equals(po.getNodeType(), "leaf"), localWeight(9), po.getPid(), po.getExtraFlag(), po.getExtraFlag1());
     }
 
     public CoreVisualizationManage proxy() {
@@ -232,6 +250,15 @@ public class CoreVisualizationManage {
 
     @XpackInteract(value = "perFilterManage", recursion = true, invalid = true)
     public IPage<VisualizationResourceVO> query(int pageNum, int pageSize, VisualizationWorkbranchQueryRequest request) {
+        return communityQuery(pageNum, pageSize, request);
+    }
+
+    public IPage<VisualizationResourceVO> queryForCurrentIdentity(int pageNum, int pageSize, VisualizationWorkbranchQueryRequest request) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) return communityQuery(pageNum, pageSize, request);
+        return proxy().query(pageNum, pageSize, request);
+    }
+
+    private IPage<VisualizationResourceVO> communityQuery(int pageNum, int pageSize, VisualizationWorkbranchQueryRequest request) {
         IPage<VisualizationResourcePO> visualizationResourcePOPageIPage = proxy().queryVisualizationPage(pageNum, pageSize, request);
         if (ObjectUtils.isEmpty(visualizationResourcePOPageIPage)) {
             return null;
@@ -254,7 +281,7 @@ public class CoreVisualizationManage {
                 new VisualizationResourceVO(
                         po.getId(), po.getResourceId(), po.getName(),
                         po.getType(), String.valueOf(po.getCreator()), String.valueOf(po.getLastEditor()), po.getLastEditTime(),
-                        po.getFavorite(), 9, po.getExtFlag())).toList();
+                        po.getFavorite(), localWeight(9), po.getExtFlag())).toList();
     }
 
     public IPage<VisualizationResourcePO> queryVisualizationPage(int goPage, int pageSize, VisualizationWorkbranchQueryRequest request) {

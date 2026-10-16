@@ -1,4 +1,6 @@
 <script lang="tsx" setup>
+import { moveField } from './fieldOrder'
+import PreviewScopeSettings from '@/components/visualization/PreviewScopeSettings.vue'
 import dvFolder from '@/assets/svg/dv-folder.svg'
 import icon_left_outlined from '@/assets/svg/icon_left_outlined.svg'
 import icon_right_outlined from '@/assets/svg/icon_right_outlined.svg'
@@ -768,6 +770,19 @@ const joinEditor = (arr: []) => {
 
 const columns = shallowRef([])
 const tableData = shallowRef([])
+const fieldPosition = field => allfields.value.findIndex(item => item.id === field.id) + 1
+const setFieldPosition = (field, position) => {
+  allfields.value = moveField(allfields.value, field.id, position)
+}
+const fieldNeighbor = (field, direction) => {
+  const group = allfields.value.filter(item => item.groupType === field.groupType)
+  return group[group.findIndex(item => item.id === field.id) + direction]
+}
+const moveFieldInGroup = (field, direction) => {
+  const neighbor = fieldNeighbor(field, direction)
+  if (neighbor) setFieldPosition(field, fieldPosition(neighbor))
+}
+
 const quota = computed(() => {
   return allfields.value.filter(ele => ele.groupType === 'q')
 })
@@ -1918,6 +1933,7 @@ const getIconNameCalc = (deType, extField, dimension = false) => {
               : `calc(100% - ${crossDatasources ? dragHeight + 40 : dragHeight}px)`
           }"
         >
+          <PreviewScopeSettings @apply="datasetPreview" />
           <div class="sql-title">
             <span class="drag" @mousedown="mousedownDragH" />
             <div class="field-data">
@@ -2090,6 +2106,34 @@ const getIconNameCalc = (deType, extField, dimension = false) => {
                     style="width: 100%"
                   >
                     <el-table-column :selectable="selectable" type="selection" width="40" />
+                    <el-table-column :label="t('field_order.title')" width="230">
+                      <template #default="scope">
+                        <el-input-number
+                          :model-value="fieldPosition(scope.row)"
+                          :min="1"
+                          :max="allfields.length"
+                          :precision="0"
+                          :controls="false"
+                          style="width: 64px; margin-right: 8px"
+                          :aria-label="t('field_order.title')"
+                          @change="value => setFieldPosition(scope.row, value)"
+                        />
+                        <el-button
+                          text
+                          :disabled="!fieldNeighbor(scope.row, -1)"
+                          @click="moveFieldInGroup(scope.row, -1)"
+                        >
+                          {{ t('field_order.up') }}
+                        </el-button>
+                        <el-button
+                          text
+                          :disabled="!fieldNeighbor(scope.row, 1)"
+                          @click="moveFieldInGroup(scope.row, 1)"
+                        >
+                          {{ t('field_order.down') }}
+                        </el-button>
+                      </template>
+                    </el-table-column>
                     <el-table-column prop="name" :label="t('dataset.field_name')" width="264">
                       <template #default="scope">
                         <div class="column-style">
@@ -2301,6 +2345,34 @@ const getIconNameCalc = (deType, extField, dimension = false) => {
                     style="width: 100%"
                   >
                     <el-table-column type="selection" width="40" />
+                    <el-table-column :label="t('field_order.title')" width="230">
+                      <template #default="scope">
+                        <el-input-number
+                          :model-value="fieldPosition(scope.row)"
+                          :min="1"
+                          :max="allfields.length"
+                          :precision="0"
+                          :controls="false"
+                          style="width: 64px; margin-right: 8px"
+                          :aria-label="t('field_order.title')"
+                          @change="value => setFieldPosition(scope.row, value)"
+                        />
+                        <el-button
+                          text
+                          :disabled="!fieldNeighbor(scope.row, -1)"
+                          @click="moveFieldInGroup(scope.row, -1)"
+                        >
+                          {{ t('field_order.up') }}
+                        </el-button>
+                        <el-button
+                          text
+                          :disabled="!fieldNeighbor(scope.row, 1)"
+                          @click="moveFieldInGroup(scope.row, 1)"
+                        >
+                          {{ t('field_order.down') }}
+                        </el-button>
+                      </template>
+                    </el-table-column>
                     <el-table-column prop="name" :label="t('dataset.field_name')" width="264">
                       <template #default="scope">
                         <div class="column-style">

@@ -133,6 +133,8 @@ public class TokenFilter implements Filter {
             }
         } finally {
             UserUtils.removeUser();
+            var local = CommonBeanFactory.getBean(io.dataease.auth.LocalIdentityProvider.class);
+            if (local != null) local.clear();
         }
     }
 

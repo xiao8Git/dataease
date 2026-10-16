@@ -24,6 +24,8 @@ import { findBaseParams } from '@/api/aiComponent'
 import AiTips from '@/layout/components/AiTips.vue'
 import DesktopSetting from './DesktopSetting.vue'
 import request from '@/config/axios'
+import LocalTenantSwitcher from './LocalTenantSwitcher.vue'
+import { useUserStoreWithOut } from '@/store/modules/user'
 
 const appearanceStore = useAppearanceStoreWithOut()
 const { push } = useRouter()
@@ -116,10 +118,14 @@ const loadSqlbotInfo = () => {
   })
 }
 onMounted(() => {
-  loadSqlbotInfo()
   initShowSystem()
   initShowToolbox()
   initShowMsg()
+  if (useUserStoreWithOut().localAccess) {
+    aiBaseUrl.value = null
+    return
+  }
+  loadSqlbotInfo()
   initAiBase()
 
   msgCountApi().then(res => {
@@ -144,7 +150,8 @@ onMounted(() => {
       <HeaderMenuItem v-for="menu in routers" :key="menu.path" :menu="menu"></HeaderMenuItem>
     </el-menu>
     <div class="operate-setting" v-if="!desktop">
-      <XpackComponent jsname="c3dpdGNoZXI=" />
+      <LocalTenantSwitcher />
+      <XpackComponent v-if="!useUserStoreWithOut().localAccess" jsname="c3dpdGNoZXI=" />
       <el-tooltip offset="6" effect="dark" content="SQLBot" placement="bottom">
         <el-icon style="margin: 0 10px" class="ai-icon copilot-icon" v-if="sqlbotEnabled">
           <Icon name="copilot"><logo_sqlbot @click="handleSQLBotClick" class="svg-icon" /></Icon>

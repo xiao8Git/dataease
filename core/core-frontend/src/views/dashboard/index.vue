@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PreviewScopeSettings from '@/components/visualization/PreviewScopeSettings.vue'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
 import { storeToRefs } from 'pinia'
@@ -41,6 +42,7 @@ const embeddedStore = useEmbedded()
 const { wsCache } = useCache()
 const canvasCacheOutRef = ref(null)
 const deCanvasRef = ref(null)
+const refreshPreviewScope = () => useEmitt().emitter.emit('calcData-all')
 const eventCheck = e => {
   if (e.key === 'panel-weight' && !compareStorage(e.oldValue, e.newValue)) {
     const resourceId = embeddedStore.resourceId || router.currentRoute.value.query.resourceId
@@ -346,8 +348,9 @@ onUnmounted(() => {
       <!--      <SqlAssistant></SqlAssistant>-->
       <!-- 中间画布 -->
       <main class="center" :class="{ 'de-screen-full': fullscreenFlag }">
+        <PreviewScopeSettings style="flex-shrink: 0" @apply="refreshPreviewScope" />
         <de-canvas
-          style="overflow-x: hidden"
+          style="overflow-x: hidden; flex: 1; min-height: 0"
           v-if="dataInitState"
           ref="deCanvasRef"
           :canvas-id="state.canvasId"

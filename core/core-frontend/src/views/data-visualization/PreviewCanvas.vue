@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PreviewScopeSettings from '@/components/visualization/PreviewScopeSettings.vue'
 import request from '@/config/axios'
 import { useLinkStoreWithOut } from '@/store/modules/link'
 import { dvMainStoreWithOut } from '@/store/modules/data-visualization/dvMain'
@@ -22,6 +23,7 @@ import { useRoute } from 'vue-router_2'
 import { filterEnumMapSync } from '@/utils/componentUtils'
 import CanvasOptBar from '@/components/visualization/CanvasOptBar.vue'
 import DvPreview from '@/views/data-visualization/DvPreview.vue'
+import UrlParameters from './UrlParameters.vue'
 const routeWatch = useRoute()
 
 const linkStore = useLinkStoreWithOut()
@@ -30,6 +32,7 @@ const { t } = useI18n()
 const embeddedStore = useEmbedded()
 const previewCanvasContainer = ref(null)
 const downloadStatus = ref(false)
+const previewScopeVersion = ref(0)
 const state = reactive({
   canvasDataPreview: null,
   canvasStylePreview: null,
@@ -284,6 +287,15 @@ defineExpose({
     ref="previewCanvasContainer"
     :style="freezeStyle"
   >
+    <PreviewScopeSettings
+      v-if="!props.publicLinkStatus"
+      :public-link="props.publicLinkStatus"
+      @apply="previewScopeVersion++"
+    />
+    <UrlParameters
+      v-if="props.publicLinkStatus && state.canvasStylePreview?.showUrlParameters"
+      :fields="state.canvasStylePreview.urlParameterFields"
+    />
     <canvas-opt-bar
       style="position: fixed"
       canvas-id="canvas-main"
@@ -291,6 +303,7 @@ defineExpose({
       :component-data="state.canvasDataPreview || []"
     ></canvas-opt-bar>
     <dv-preview
+      :key="previewScopeVersion"
       ref="dvPreviewRef"
       style="height: 100vh"
       v-if="state.canvasStylePreview && state.initState && state.dvInfo?.type === 'dataV'"
@@ -306,6 +319,7 @@ defineExpose({
       :show-linkage-button="false"
     ></dv-preview>
     <de-preview
+      :key="previewScopeVersion"
       ref="dvPreview"
       v-if="state.canvasStylePreview && state.initState && state.dvInfo?.type === 'dashboard'"
       :component-data="state.canvasDataPreview"

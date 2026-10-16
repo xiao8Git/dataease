@@ -1,7 +1,7 @@
 package io.dataease.extensions.datasource.dto;
 
 import lombok.Data;
-import org.springframework.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
 import java.util.List;
@@ -33,7 +33,8 @@ public class DatasourceRequest implements Serializable {
     }
 
     public String getQuery() {
-        return this.rebuildSqlWithFragment(this.query);
+        String sql = this.rebuildSqlWithFragment(this.query);
+        return QueryScope.apply(sql);
     }
 
     public void setQuery(String query) {

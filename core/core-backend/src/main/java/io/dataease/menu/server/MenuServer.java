@@ -20,6 +20,7 @@ public class MenuServer implements MenuApi {
 
     @Override
     public List<MenuVO> query() {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) return menuManage.localMenus();
         List<CoreMenu> coreMenus = menuManage.coreMenus();
         return menuManage.query(new ArrayList<>(coreMenus));
     }

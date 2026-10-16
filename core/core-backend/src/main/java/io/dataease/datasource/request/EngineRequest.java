@@ -26,7 +26,7 @@ public class EngineRequest {
     }
 
     public String getQuery() {
-        return this.rebuildSqlWithFragment(this.query);
+        return io.dataease.extensions.datasource.dto.QueryScope.apply(this.rebuildSqlWithFragment(this.query));
     }
 
     public void setQuery(String query) {

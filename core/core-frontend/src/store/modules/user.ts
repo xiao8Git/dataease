@@ -7,6 +7,7 @@ const { wsCache } = useCache()
 const { changeLocale } = useLocale()
 
 interface UserState {
+  localAccess: boolean
   token: string
   uid: string
   name: string
@@ -19,6 +20,7 @@ interface UserState {
 export const userStore = defineStore('user', {
   state: (): UserState => {
     return {
+      localAccess: false,
       token: null,
       uid: null,
       name: null,
@@ -56,6 +58,8 @@ export const userStore = defineStore('user', {
       const user = await import('@/api/user')
       const res = await user.userInfo()
       const data = res.data
+      this.localAccess = data.localAccess === true
+      wsCache.set('user.localAccess', this.localAccess)
       data.token = wsCache.get('user.token')
       data.exp = wsCache.get('user.exp')
       data.time = wsCache.get('user.time')
@@ -107,6 +111,7 @@ export const userStore = defineStore('user', {
       changeLocale(language as any)
     },
     clear() {
+      wsCache.delete('user.localAccess')
       const keys: string[] = ['token', 'uid', 'name', 'oid', 'language', 'exp', 'time']
       keys.forEach(key => wsCache.delete('user.' + key))
     }

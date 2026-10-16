@@ -136,7 +136,7 @@ public class DatasourceServer implements DatasourceApi {
         }
         BusiNodeRequest request = new BusiNodeRequest();
         request.setBusiFlag("datasource");
-        List<BusiNodeVO> busiNodeVOS = dataSourceManage.tree(request);
+        List<BusiNodeVO> busiNodeVOS = dataSourceManage.treeForCurrentIdentity(request);
         List<Long> ids = new ArrayList<>();
         filterDs(busiNodeVOS, ids, dataSourceDTO.getType(), dataSourceDTO.getId());
 
@@ -759,7 +759,7 @@ public class DatasourceServer implements DatasourceApi {
 
     @Override
     public List<BusiNodeVO> tree(BusiNodeRequest request) throws DEException {
-        return dataSourceManage.tree(request);
+        return dataSourceManage.treeForCurrentIdentity(request);
     }
 
     @Override

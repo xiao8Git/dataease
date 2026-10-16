@@ -185,6 +185,7 @@ public class DatasetTableFieldManage {
         wrapper.eq("dataset_group_id", id);
         wrapper.eq("checked", true);
         wrapper.isNull("chart_id");
+        wrapper.orderByAsc("column_index", "id");
         return transDTO(coreDatasetTableFieldMapper.selectList(wrapper));
     }
 

@@ -1,4 +1,5 @@
 <script lang="tsx" setup>
+import PreviewScopeSettings from '@/components/visualization/PreviewScopeSettings.vue'
 import icon_copy_filled from '@/assets/svg/icon_copy_filled.svg'
 import icon_dataset from '@/assets/svg/icon_dataset.svg'
 import icon_deleteTrash_outlined from '@/assets/svg/icon_delete-trash_outlined.svg'
@@ -509,6 +510,14 @@ const createDataset = (data?: BusiTreeNode) => {
   })
 }
 
+const refreshPreviewScope = () => {
+  columnsPreview = []
+  dataPreview = []
+  tableData.value = []
+  handleClick('dataPreview')
+}
+
+let previewRequestVersion = 0
 const handleClick = (tabName: TabPaneName) => {
   switch (tabName) {
     case 'dataPreview':
@@ -517,10 +526,12 @@ const handleClick = (tabName: TabPaneName) => {
         tableData.value = dataPreview
         break
       }
+      const version = ++previewRequestVersion
       dataPreviewLoading.value = true
       total.value = null
       getDatasetPreview(nodeInfo.id)
         .then(res => {
+          if (version !== previewRequestVersion) return
           allFields = (res?.allFields as unknown as Field[]) || []
           datasetTableFiled.value = allFields
           columnsPreview = generateColumns((res?.data?.fields as Field[]) || [])
@@ -529,9 +540,10 @@ const handleClick = (tabName: TabPaneName) => {
           tableData.value = dataPreview
         })
         .finally(() => {
-          dataPreviewLoading.value = false
+          if (version === previewRequestVersion) dataPreviewLoading.value = false
         })
       getDatasetTotal(nodeInfo.id).then(res => {
+        if (version !== previewRequestVersion) return
         total.value = res
       })
       break
@@ -1070,6 +1082,7 @@ const proxyAllowDrop = throttle((arg1, arg2) => {
             />
           </div>
         </div>
+        <PreviewScopeSettings v-show="activeName === 'dataPreview'" @apply="refreshPreviewScope" />
         <div class="dataset-table-info">
           <div v-if="activeName === 'dataPreview'" class="preview-num">
             {{ t('data_set.pieces_in_total', { msg: total }) }}

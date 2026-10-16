@@ -1,0 +1,6 @@
+# Merge into server-only standalone configuration after staging acceptance.
+dataease:
+  local-access:
+    enabled: ${DATAEASE_LOCAL_ACCESS_ENABLED:false}
+    # Only used to create the first local admin; never overrides an existing account.
+    admin-password: ${DATAEASE_LOCAL_ACCESS_ADMIN_PASSWORD:}

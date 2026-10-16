@@ -68,6 +68,15 @@ public class VisualizationStoreManage {
 
     @XpackInteract(value = "perFilterManage", recursion = true, invalid = true)
     public IPage<VisualizationStoreVO> query(int pageNum, int pageSize, VisualizationWorkbranchQueryRequest request) {
+        return communityQuery(pageNum, pageSize, request);
+    }
+
+    public IPage<VisualizationStoreVO> queryForCurrentIdentity(int pageNum, int pageSize, VisualizationWorkbranchQueryRequest request) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) return communityQuery(pageNum, pageSize, request);
+        return proxy().query(pageNum, pageSize, request);
+    }
+
+    private IPage<VisualizationStoreVO> communityQuery(int pageNum, int pageSize, VisualizationWorkbranchQueryRequest request) {
         IPage<StorePO> storePOIPage = proxy().queryStorePage(pageNum, pageSize, request);
         if (ObjectUtils.isEmpty(storePOIPage)) return null;
         List<VisualizationStoreVO> vos = proxy().formatResult(storePOIPage.getRecords());
@@ -90,7 +99,9 @@ public class VisualizationStoreManage {
                 new VisualizationStoreVO(
                         po.getStoreId(), po.getResourceId(), po.getName(),
                         po.getType(), String.valueOf(po.getCreator()), ObjectUtils.isEmpty(po.getEditor()) ? null : String.valueOf(po.getEditor()),
-                        po.getEditTime(), 9, po.getExtFlag(), po.getExtFlag1())).toList();
+                        po.getEditTime(), io.dataease.localaccess.security.LocalAccessContext.get() != null
+                                && !io.dataease.localaccess.security.LocalAccessContext.get().admin() ? 1 : 9,
+                        po.getExtFlag(), po.getExtFlag1())).toList();
     }
 
     public IPage<StorePO> queryStorePage(int goPage, int pageSize, VisualizationWorkbranchQueryRequest request) {

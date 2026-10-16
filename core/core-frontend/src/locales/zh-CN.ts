@@ -1,4 +1,131 @@
 export default {
+  local_access: {
+    platform_admin: '平台管理员',
+    admin_scope: '平台管理（无租户）',
+    title: '租户与权限',
+    description:
+      '普通用户绑定租户和角色，角色控制租户内功能。管理员管理全局功能，顶部租户仅用于切换数据查看范围。',
+    tenants: '租户管理',
+    new_tenant: '新建租户',
+    name: '名称',
+    code: '租户标识',
+    status: '状态',
+    enabled: '启用',
+    disabled: '停用',
+    edit: '编辑',
+    members_permissions: '用户、角色与看板',
+    choose_tenant: '请选择当前租户',
+    create_tenant_first: '请先新建租户',
+    roles: '角色与功能权限',
+    new_role: '新建角色',
+    features: '可用功能',
+    dashboard: '查看仪表板和大屏',
+    dataset: '管理数据集',
+    datasource: '管理数据源',
+    users: '用户管理',
+    new_user: '新建用户',
+    account: '登录账号',
+    role: '角色',
+    data_user: '业务用户标识',
+    edit_user: '编辑／重置密码',
+    grants: '可见看板',
+    grant_help: '选中的看板可供该租户使用，查询数据始终按当前租户过滤。未选择表示不可见任何看板。',
+    choose_dashboards: '选择可见的仪表板或大屏',
+    save: '保存',
+    saved: '已保存',
+    tenant: '租户',
+    user: '用户',
+    code_help: '必须与业务数据的 tenant_id 一致，创建后不可修改。',
+    data_user_help: '对应业务数据中的 user_id，用于已有的用户数据范围校验。',
+    password: '密码',
+    password_help: '12 至 128 个字符；编辑时留空保留原密码。保存用户后原登录失效。',
+    cancel: '取消'
+  },
+  embed_keys: {
+    title: '租户签名密钥',
+    help: '为不同租户配置独立签名密钥。同一租户可使用多个 kid，便于先切换签名方，再停用旧密钥。',
+    add: '新增密钥',
+    tenant: '租户 ID',
+    status: '状态',
+    enabled: '启用',
+    disabled: '停用',
+    source: '来源',
+    managed: '界面配置',
+    deployment: '配置文件',
+    actions: '操作',
+    edit: '编辑',
+    secret: 'Base64 签名密钥',
+    generate: '生成随机密钥',
+    keep_secret: '留空保留现有密钥',
+    invalid_secret: '请输入标准 Base64 编码的 32–128 字节密钥。',
+    invalid_identity:
+      'kid 仅支持 1–64 位字母、数字、下划线或连字符；租户 ID 支持 1–128 位字母、数字和 _ . : @ / -。',
+    identity_help: 'kid 全局唯一，保存后不可更换租户或 kid；轮换时请新增 kid。',
+    secret_help:
+      '已保存密钥仅显示前 4 位和后 4 位，中间以 * 隐藏。请在保存前将新密钥安全配置到对应租户的签名服务中，双方必须使用相同的 kid 和密钥。',
+    effect: '保存后对新的链接校验立即生效。停用不会撤销已签发的访问令牌；现有令牌最长 15 分钟到期。'
+  },
+  iframe_whitelist: {
+    enabled: '启用 iframe 来源验证',
+    toggle_help:
+      '关闭后允许任意网站通过 iframe 嵌入，保留白名单配置；重新开启后恢复验证。登录、签名和租户权限校验仍然有效。',
+    unrestricted: '未启用来源验证（允许任意网站嵌入）',
+
+    title: 'iframe 嵌入白名单',
+    help: '配置允许通过 iframe 嵌入 DataEase 的父页面来源。验证开启时，同源页面始终允许；清空并保存后禁止其他网站嵌入。此设置不替代分享链接和用户权限校验。',
+    deployment: '当前使用部署配置。首次保存后，将以此处的白名单替换部署中的嵌入策略。',
+    current: '当前嵌入策略',
+    origins: '允许的来源（每行一个，最多 50 个）',
+    placeholder: 'https://portal.example.com\nhttp://portal.example.com:15000',
+    effect:
+      '填写协议、域名或 IP，以及可选端口，不包含路径、参数或通配符。保存后 5 秒内生效，请重新加载嵌入页面。',
+    invalid: '请输入有效的 HTTP(S) 来源，每行一个，最多 50 个；不能包含路径、参数、账号或通配符。'
+  },
+  field_order: { title: '字段顺序', up: '上移', down: '下移' },
+  preview_scope: {
+    title: '预览调试参数',
+    apply: '应用并加载',
+    clear: '清除',
+    hint: '仅管理员临时调试，不保存到配置',
+    active: '调试中',
+    invalid: '请填写租户和用户 ID，仅支持字母、数字及 _ . : @ / -，最多 128 个字符。'
+  },
+  tenant_sql_check: {
+    shared_title: '共享数据集：SQL 必须适用于所有租户',
+    shared_hint:
+      "请勿写死租户 ID、用户 ID、课程等业务数据 ID，或使用仅适用于某个租户的固定值。租户、用户条件请使用当前身份参数；其他业务条件通过参数或关联查询获取。示例：tenant_id = '__DE_TICKET_TENANT__'；按用户筛选时使用 '__DE_TICKET_USER__'。",
+    preview_title: '运行调试参数（仅本次编辑）',
+    preview_tenant: '输入租户 ID，留空使用 NULL',
+    preview_user: '输入用户 ID，留空使用 NULL',
+    preview_hint:
+      '点击确认后用于上方“运行”。只替换本次预览请求，不保存到数据集；关闭编辑页后清空。正式分享仍从校验后的 ticket 取值。',
+    preview_invalid: '参数仅支持字母、数字及 _ . : @ / -，最多 128 个字符。',
+
+    covered: '租户条件已覆盖',
+    missing: '租户条件未确认',
+    hint: '静态检查：绿色表示已关联到具体租户值或参数，红色表示未确认。支持等值、IN 和租户关联链；复杂或不支持的语法可能需要人工核对，此提示不替代服务端权限校验。',
+    parse_failed: 'SQL 不完整或语法暂不支持，无法确认租户条件，表名暂标红。',
+    incomplete: '解析未完成',
+    parameters: '租户与用户参数说明',
+    tenant_description:
+      "租户标识，用于限定数据所属租户。当前分享看板由服务端校验后，将 SQL 中的单引号占位符 '__DE_TICKET_TENANT__' 替换为可信租户值。",
+    user_description:
+      "访问用户标识，用于在对应租户下查询用户管辖组织及下级组织，过滤其可见数据；不是只查询该用户本人的记录。SQL 中使用单引号占位符 '__DE_TICKET_USER__'。",
+    scope_description:
+      '这两个专用占位符从校验后的分享令牌取值，不需要在下方配置普通变量；没有分享令牌时替换为 NULL。表名颜色只检查 tenant_id 条件，不检查 user_id 管辖规则。'
+  },
+  dataset_sql_format: {
+    action: '格式化 SQL',
+    failed: '无法格式化此 SQL，请检查语法或数据源方言，原文已保留。'
+  },
+  url_parameters: {
+    enabled: '显示访问 URL 参数',
+    fields: '显示字段',
+    placeholder: '选择或输入字段名后按回车',
+    hint: '保存并发布后在分享和嵌入页面生效。未选择字段时不展示参数值。',
+    title: '访问 URL 参数',
+    empty: '当前 URL 没有可显示的参数'
+  },
   share_visitor: {
     no_permission: '你没有此项权限',
     title: '访客权限',

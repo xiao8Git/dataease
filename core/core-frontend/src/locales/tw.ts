@@ -1,4 +1,131 @@
 export default {
+  local_access: {
+    platform_admin: '平台管理員',
+    admin_scope: '平台管理（無租戶）',
+    title: '租戶与權限',
+    description:
+      '一般使用者綁定租戶與角色，角色控制租戶內功能。管理員管理全域功能，頂部租戶僅切換資料檢視範圍。',
+    tenants: '租戶管理',
+    new_tenant: '新增租戶',
+    name: '名稱',
+    code: '租戶識別碼',
+    status: '狀態',
+    enabled: '啟用',
+    disabled: '停用',
+    edit: '編輯',
+    members_permissions: '使用者、角色与看板',
+    choose_tenant: '請選擇目前租戶',
+    create_tenant_first: '请先新增租戶',
+    roles: '角色与功能權限',
+    new_role: '新增角色',
+    features: '可用功能',
+    dashboard: '查看儀表板和大屏',
+    dataset: '管理資料集',
+    datasource: '管理資料源',
+    users: '使用者管理',
+    new_user: '新增使用者',
+    account: '登入帳號',
+    role: '角色',
+    data_user: '業務使用者識別碼',
+    edit_user: '編輯／重設密碼',
+    grants: '可見看板',
+    grant_help: '选中的看板可供该租戶使用，查詢資料始终按目前租戶過濾。未選擇表示不可見任何看板。',
+    choose_dashboards: '選擇可見的儀表板或大屏',
+    save: '儲存',
+    saved: '已儲存',
+    tenant: '租戶',
+    user: '使用者',
+    code_help: '必须与業務資料的 tenant_id 一致，建立后不可修改。',
+    data_user_help: '對應業務資料中的 user_id，用于已有的使用者資料範圍校验。',
+    password: '密碼',
+    password_help: '12 至 128 个字元；編輯时留空保留原密碼。儲存使用者后原登入失效。',
+    cancel: '取消'
+  },
+  embed_keys: {
+    title: '租戶簽名密鑰',
+    help: '為不同租戶配置獨立簽名密鑰。同一租戶可使用多個 kid，便於先切換簽名服務，再停用舊密鑰。',
+    add: '新增密鑰',
+    tenant: '租戶 ID',
+    status: '狀態',
+    enabled: '啟用',
+    disabled: '停用',
+    source: '來源',
+    managed: '介面配置',
+    deployment: '配置檔案',
+    actions: '操作',
+    edit: '編輯',
+    secret: 'Base64 簽名密鑰',
+    generate: '產生隨機密鑰',
+    keep_secret: '留空保留現有密鑰',
+    invalid_secret: '請輸入標準 Base64 編碼的 32–128 位元組密鑰。',
+    invalid_identity:
+      'kid 僅支援 1–64 位字母、數字、底線或連字號；租戶 ID 支援 1–128 位字母、數字和 _ . : @ / -。',
+    identity_help: 'kid 全域唯一，儲存後不可更換租戶或 kid；輪換時請新增 kid。',
+    secret_help:
+      '已儲存密鑰僅顯示前 4 位和後 4 位，中間以 * 隱藏。請在儲存前將新密鑰安全配置到對應租戶的簽名服務中，雙方必須使用相同的 kid 和密鑰。',
+    effect: '儲存後對新的連結校驗立即生效。停用不會撤銷已簽發的存取權杖；現有權杖最長 15 分鐘到期。'
+  },
+  iframe_whitelist: {
+    enabled: '啟用 iframe 來源驗證',
+    toggle_help:
+      '關閉後允許任意網站透過 iframe 嵌入，保留白名單設定；重新開啟後恢復驗證。登入、簽章和租戶權限驗證仍然有效。',
+    unrestricted: '未啟用來源驗證（允許任意網站嵌入）',
+
+    title: 'iframe 嵌入白名單',
+    help: '設定允許透過 iframe 嵌入 DataEase 的父頁面來源。驗證開啟時，同源頁面始終允許；清空並儲存後禁止其他網站嵌入。此設定不取代分享連結與使用者權限驗證。',
+    deployment: '目前使用部署設定。首次儲存後，將以此處的白名單取代部署中的嵌入策略。',
+    current: '目前嵌入策略',
+    origins: '允許的來源（每行一個，最多 50 個）',
+    placeholder: 'https://portal.example.com\nhttp://portal.example.com:15000',
+    effect:
+      '填寫協定、網域或 IP，以及可選連接埠，不包含路徑、參數或萬用字元。儲存後 5 秒內生效，請重新載入嵌入頁面。',
+    invalid: '請輸入有效的 HTTP(S) 來源，每行一個，最多 50 個；不能包含路徑、參數、帳號或萬用字元。'
+  },
+  field_order: { title: '欄位順序', up: '上移', down: '下移' },
+  preview_scope: {
+    title: '預覽除錯參數',
+    apply: '套用並載入',
+    clear: '清除',
+    hint: '僅管理員臨時除錯，不儲存到設定',
+    active: '除錯中',
+    invalid: '請填寫租戶和使用者 ID，僅支援字母、數字及 _ . : @ / -，最多 128 個字元。'
+  },
+  tenant_sql_check: {
+    shared_title: '共用資料集：SQL 必須適用於所有租戶',
+    shared_hint:
+      "請勿寫死租戶 ID、使用者 ID、課程等業務資料 ID，或使用僅適用於某個租戶的固定值。租戶、使用者條件請使用目前身分參數；其他業務條件透過參數或關聯查詢取得。範例：tenant_id = '__DE_TICKET_TENANT__'；依使用者篩選時使用 '__DE_TICKET_USER__'。",
+    preview_title: '執行除錯參數（僅本次編輯）',
+    preview_tenant: '輸入租戶 ID，留空使用 NULL',
+    preview_user: '輸入使用者 ID，留空使用 NULL',
+    preview_hint:
+      '確認後用於上方「執行」。僅替換本次預覽請求，不儲存到資料集；關閉編輯頁後清空。正式分享仍從驗證後的 ticket 取值。',
+    preview_invalid: '參數僅支援字母、數字及 _ . : @ / -，最多 128 個字元。',
+
+    covered: '租戶條件已覆蓋',
+    missing: '租戶條件未確認',
+    hint: '靜態檢查：綠色表示已關聯到具體租戶值或參數，紅色表示未確認。支援等值、IN 和租戶關聯鏈；複雜語法可能需要人工核對，不替代服務端權限校驗。',
+    parse_failed: 'SQL 不完整或語法暫不支援，無法確認租戶條件，表名暫標紅。',
+    incomplete: '解析未完成',
+    parameters: '租戶與使用者參數說明',
+    tenant_description:
+      "租戶標識，限定資料所屬租戶。分享看板由服務端校驗後，將 SQL 中的單引號佔位符 '__DE_TICKET_TENANT__' 替換為可信租戶值。",
+    user_description:
+      "訪問使用者標識，用於查詢該租戶下的管轄組織及下級組織，過濾可見資料，並非只查詢使用者本人的記錄。SQL 使用單引號佔位符 '__DE_TICKET_USER__'。",
+    scope_description:
+      '這兩個專用佔位符從校驗後的分享令牌取值，無需在下方配置普通變數；沒有分享令牌時替換為 NULL。表名顏色只檢查 tenant_id 條件，不檢查 user_id 管轄規則。'
+  },
+  dataset_sql_format: {
+    action: '格式化 SQL',
+    failed: '無法格式化此 SQL，請檢查語法或資料來源方言，原文已保留。'
+  },
+  url_parameters: {
+    enabled: '顯示訪問 URL 參數',
+    fields: '顯示欄位',
+    placeholder: '選擇或輸入欄位名稱後按 Enter',
+    hint: '儲存並發佈後在分享和嵌入頁面生效。未選擇欄位時不展示參數值。',
+    title: '訪問 URL 參數',
+    empty: '目前 URL 沒有可顯示的參數'
+  },
   share_visitor: {
     no_permission: '你沒有此項權限',
     title: '訪客權限',

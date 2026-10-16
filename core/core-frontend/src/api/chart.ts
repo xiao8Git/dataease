@@ -1,4 +1,7 @@
 import request from '@/config/axios'
+import { previewScopeHeaders } from '@/utils/dashboardPreviewScope'
+import { useLinkStoreWithOut } from '@/store/modules/link'
+import { useEmbedded } from '@/store/modules/embedded'
 import { originNameHandleWithArr, originNameHandleBackWithArr } from '@/utils/CalculateFields'
 import { cloneDeep } from 'lodash-es'
 export interface Field {
@@ -72,23 +75,30 @@ export const getData = async (data): Promise<IResponse> => {
   ]
   const dataFields = ['fields', 'sourceFields']
   originNameHandleWithArr(copyData, fields)
-  return request.post({ url: '/chartData/getData', data: copyData }).then(res => {
-    if (res.code === 0) {
-      originNameHandleBackWithArr(res?.data, fields)
-      // 动态计算字段在数据中，也需要转码
-      originNameHandleWithArr(res?.data?.data, dataFields)
-      originNameHandleBackWithArr(res?.data?.data, dataFields)
-      originNameHandleBackWithArr(res?.data?.data?.left, ['fields'])
-      originNameHandleBackWithArr(res?.data?.data?.right, ['fields'])
-      return res?.data
-    } else {
-      originNameHandleBackWithArr(res, fields)
-      originNameHandleBackWithArr(res?.data, dataFields)
-      originNameHandleBackWithArr(res?.data?.left, ['fields'])
-      originNameHandleBackWithArr(res?.data?.right, ['fields'])
-      return res
-    }
-  })
+  return request
+    .post({
+      url: '/chartData/getData',
+      data: copyData,
+      headers:
+        useLinkStoreWithOut().getLinkToken || useEmbedded().token ? {} : previewScopeHeaders()
+    })
+    .then(res => {
+      if (res.code === 0) {
+        originNameHandleBackWithArr(res?.data, fields)
+        // 动态计算字段在数据中，也需要转码
+        originNameHandleWithArr(res?.data?.data, dataFields)
+        originNameHandleBackWithArr(res?.data?.data, dataFields)
+        originNameHandleBackWithArr(res?.data?.data?.left, ['fields'])
+        originNameHandleBackWithArr(res?.data?.data?.right, ['fields'])
+        return res?.data
+      } else {
+        originNameHandleBackWithArr(res, fields)
+        originNameHandleBackWithArr(res?.data, dataFields)
+        originNameHandleBackWithArr(res?.data?.left, ['fields'])
+        originNameHandleBackWithArr(res?.data?.right, ['fields'])
+        return res
+      }
+    })
 }
 
 export const innerExportDetails = async (data): Promise<IResponse> => {

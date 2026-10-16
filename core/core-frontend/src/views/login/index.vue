@@ -100,7 +100,12 @@ const handleLogin = () => {
       loginApi(param)
         .then(res => {
           const { token, exp, mfa } = res.data
-          if (!isLdap && !xpackLoadFail.value && xpackInvalidPwd.value?.invokeMethod) {
+          if (
+            res.data.localAccess !== true &&
+            !isLdap &&
+            !xpackLoadFail.value &&
+            xpackInvalidPwd.value?.invokeMethod
+          ) {
             const param = {
               methodName: 'init',
               args: res.data
@@ -328,7 +333,7 @@ onMounted(async () => {
                     v-model="state.loginForm.password"
                     :placeholder="t('common.pwd')"
                     show-password
-                    maxlength="30"
+                    maxlength="128"
                     show-word-limit
                     autocomplete="new-password"
                     @keypress.enter.stop="enterHandler"

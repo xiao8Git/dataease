@@ -1,7 +1,12 @@
 <template>
   <p class="router-title">{{ t('commons.system_parameter_setting') }}</p>
   <el-tabs v-model="activeName">
-    <el-tab-pane v-for="item in tabArray" :key="item.name" :label="item.label" :name="item.name" />
+    <el-tab-pane
+      v-for="item in visibleTabs"
+      :key="item.name"
+      :label="item.label"
+      :name="item.name"
+    />
   </el-tabs>
   <div class="sys-setting-p">
     <div
@@ -10,6 +15,8 @@
     >
       <map-setting v-if="activeName === 'map'" />
       <basic-info v-if="activeName === 'basic'" />
+      <iframe-whitelist v-if="activeName === 'iframe' && isAdmin" />
+      <embed-keys v-if="activeName === 'embedKeys' && isAdmin" />
       <engine-info v-if="activeName === 'engine'" />
       <xpack-component
         jsname="L21lbnUvc2V0dGluZy9lbWFpbC9pbmRleA=="
@@ -22,10 +29,13 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from '@/hooks/web/useI18n'
 import MapSetting from './map/MapSetting.vue'
 import BasicInfo from './basic/BasicInfo.vue'
+import IframeWhitelist from './iframe/IframeWhitelist.vue'
+import EmbedKeys from './embed/EmbedKeys.vue'
+import { userStore } from '@/store/modules/user'
 import ThirdParty from './third-party/index.vue'
 import EngineInfo from '@/views/system/parameter/engine/EngineInfo.vue'
 import { XpackComponent } from '@/components/plugin'
@@ -34,8 +44,12 @@ import { isDesktop } from '@/utils/ModelUtil'
 const { t } = useI18n()
 
 const desktop = isDesktop()
+const user = userStore()
+const isAdmin = computed(() => String(user.getUid) === '1')
 const tabArray = ref([
   { label: t('system.basic_settings'), name: 'basic' },
+  { label: t('iframe_whitelist.title'), name: 'iframe' },
+  { label: t('embed_keys.title'), name: 'embedKeys' },
   { label: t('system.map_settings'), name: 'map' },
   { label: t('system.engine_settings'), name: 'engine' },
   {
@@ -43,6 +57,10 @@ const tabArray = ref([
     name: 'third_party'
   }
 ])
+
+const visibleTabs = computed(() =>
+  tabArray.value.filter(item => !['iframe', 'embedKeys'].includes(item.name) || isAdmin.value)
+)
 
 const activeName = ref('basic')
 

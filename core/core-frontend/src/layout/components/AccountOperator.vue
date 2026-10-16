@@ -27,7 +27,7 @@ interface LinkItem {
   method?: string
 }
 const linkList = ref([{ id: 5, label: t('common.about'), method: 'toAbout' }] as LinkItem[])
-if (!appearanceStore.getShowAbout) {
+if (!appearanceStore.getShowAbout || userStore.localAccess) {
   linkList.value.splice(0, 1)
 }
 
@@ -96,6 +96,9 @@ const openPopover = () => {
   unref(popoverRef).popperRef?.delayHide?.()
 }
 
+if (userStore.localAccess && uid.value !== '1') {
+  linkLoaded([{ id: 2, link: '/modify-pwd/index', label: t('user.change_password') }])
+}
 if (uid.value === '1') {
   linkLoaded([{ id: 4, link: '/sys-setting/parameter', label: t('commons.system_setting') }])
   const desktop = wsCache.get('app.desktop')
@@ -176,8 +179,12 @@ if (uid.value === '1') {
     </div>
   </el-popover>
 
-  <AboutPage />
-  <XpackComponent jsname="dWNlbnRlci1oYW5kbGVy" @loaded="xpackLinkLoaded" />
+  <AboutPage v-if="!userStore.localAccess" />
+  <XpackComponent
+    v-if="!userStore.localAccess"
+    jsname="dWNlbnRlci1oYW5kbGVy"
+    @loaded="xpackLinkLoaded"
+  />
 </template>
 
 <style lang="less">

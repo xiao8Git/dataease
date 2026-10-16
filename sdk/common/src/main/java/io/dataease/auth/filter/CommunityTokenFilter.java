@@ -31,6 +31,11 @@ public class CommunityTokenFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        var local = CommonBeanFactory.getBean(io.dataease.auth.LocalIdentityProvider.class);
+        if (local != null && local.enabled()) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
         Long userId = null;
         String token = ServletUtils.getToken();
         TokenUserBO userBO = null;

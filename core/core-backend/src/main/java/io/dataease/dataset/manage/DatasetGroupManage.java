@@ -234,6 +234,15 @@ public class DatasetGroupManage {
 
     @XpackInteract(value = "authResourceTree", replace = true, invalid = true)
     public List<BusiNodeVO> tree(BusiNodeRequest request) {
+        return communityTree(request);
+    }
+
+    public List<BusiNodeVO> treeForCurrentIdentity(BusiNodeRequest request) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) return communityTree(request);
+        return io.dataease.utils.CommonBeanFactory.getBean(DatasetGroupManage.class).tree(request);
+    }
+
+    private List<BusiNodeVO> communityTree(BusiNodeRequest request) {
 
         QueryWrapper<Object> queryWrapper = new QueryWrapper<>();
         if (ObjectUtils.isNotEmpty(request.getLeaf())) {
@@ -358,7 +367,9 @@ public class DatasetGroupManage {
             Map<String, Object> map = datasetSQLManage.getUnionSQLForEdit(datasetGroupInfoDTO, null);
             List<DatasetTableFieldDTO> unionFields = (List<DatasetTableFieldDTO>) map.get("field");
 
+            int columnIndex = 0;
             for (DatasetTableFieldDTO datasetTableFieldDTO : allFields) {
+                datasetTableFieldDTO.setColumnIndex(columnIndex++);
                 DatasetTableFieldDTO dto = datasetTableFieldManage.selectById(datasetTableFieldDTO.getId());
                 if (ObjectUtils.isEmpty(dto)) {
                     if (Objects.equals(datasetTableFieldDTO.getExtField(), ExtFieldConstant.EXT_NORMAL)) {

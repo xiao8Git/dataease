@@ -21,6 +21,7 @@ export default {
       }
     ]
     function isLoginStatus() {
+      if (wsCache.get('user.localAccess')) return false
       if (wsCache.get('app.desktop')) {
         return true
       }

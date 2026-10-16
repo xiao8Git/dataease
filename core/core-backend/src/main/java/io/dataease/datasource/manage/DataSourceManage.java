@@ -91,6 +91,15 @@ public class DataSourceManage {
 
     @XpackInteract(value = "datasourceResourceTree", replace = true, invalid = true)
     public List<BusiNodeVO> tree(BusiNodeRequest request) {
+        return communityTree(request);
+    }
+
+    public List<BusiNodeVO> treeForCurrentIdentity(BusiNodeRequest request) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) return communityTree(request);
+        return io.dataease.utils.CommonBeanFactory.getBean(DataSourceManage.class).tree(request);
+    }
+
+    private List<BusiNodeVO> communityTree(BusiNodeRequest request) {
 
         QueryWrapper<DataSourceNodePO> queryWrapper = new QueryWrapper<>();
         if (ObjectUtils.isNotEmpty(request.getLeaf()) && !request.getLeaf()) {

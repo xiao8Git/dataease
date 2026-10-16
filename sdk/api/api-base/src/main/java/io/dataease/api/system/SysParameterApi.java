@@ -4,6 +4,7 @@ import com.github.xiaoymin.knife4j.annotations.ApiSupport;
 import io.dataease.api.system.request.OnlineMapEditor;
 import io.dataease.api.system.request.SQLBotConfigCreator;
 import io.dataease.api.system.vo.SQLBotConfigVO;
+import io.dataease.api.system.vo.IframeWhitelistVO;
 import io.dataease.api.system.vo.SettingItemVO;
 import io.dataease.api.system.vo.ShareBaseVO;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,23 @@ import java.util.Map;
 @Tag(name = "系统设置:系统参数")
 @ApiSupport(order = 799)
 public interface SysParameterApi {
+    @Operation(summary = "查询租户签名密钥（不返回密钥）")
+    @GetMapping("/embedKeys")
+    List<io.dataease.api.system.vo.EmbedKeyVO> embedKeys();
+
+    @Operation(summary = "保存租户签名密钥")
+    @PostMapping("/embedKeys")
+    void saveEmbedKey(@RequestBody io.dataease.api.system.request.EmbedKeyEditor editor);
+
+
+    @Operation(summary = "查询 iframe 嵌入白名单")
+    @GetMapping("/iframeWhitelist")
+    IframeWhitelistVO iframeWhitelist();
+
+    @Operation(summary = "保存 iframe 嵌入白名单")
+    @PostMapping("/iframeWhitelist")
+    void saveIframeWhitelist(@RequestBody List<String> origins,
+            @RequestParam(value = "enabled", required = false) Boolean enabled);
 
     @Operation(summary = "查询单个配置值")
     @Parameter(name = "key", description = "配置key", required = true, in = ParameterIn.PATH)

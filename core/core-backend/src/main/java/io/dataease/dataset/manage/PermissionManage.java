@@ -39,7 +39,7 @@ public class PermissionManage {
 
     private RowPermissionsApi getRowPermissionsApi() {
 
-        return rowPermissionsApi;
+        return io.dataease.localaccess.security.LocalAccessContext.get() == null ? rowPermissionsApi : null;
     }
 
     private ColumnPermissionsApi getColumnPermissionsApi() {
@@ -147,6 +147,7 @@ public class PermissionManage {
 
     private List<DataSetRowPermissionsTreeDTO> rowPermissionsTree(Long datasetId, Long userId) {
         List<DataSetRowPermissionsTreeDTO> datasetRowPermissions = new ArrayList<>();
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null) return datasetRowPermissions;
         userId = userId != null ? userId : AuthUtils.getUser().getUserId();
 
         if (AuthUtils.isSysAdmin(userId)) {

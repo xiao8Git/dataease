@@ -836,9 +836,9 @@ public class DataVisualizationServer implements DataVisualizationApi {
             BusiNodeRequest requestDv = new BusiNodeRequest();
             BeanUtils.copyBean(requestDv, request);
             requestDv.setBusiFlag("dashboard");
-            List<BusiNodeVO> dashboardResult = coreVisualizationManage.tree(requestDv);
+            List<BusiNodeVO> dashboardResult = coreVisualizationManage.treeForCurrentIdentity(requestDv);
             requestDv.setBusiFlag("dataV");
-            List<BusiNodeVO> dataVResult = coreVisualizationManage.tree(requestDv);
+            List<BusiNodeVO> dataVResult = coreVisualizationManage.treeForCurrentIdentity(requestDv);
             List<BusiNodeVO> result = new ArrayList<>();
             if (!CollectionUtils.isEmpty(dashboardResult)) {
                 resourceTreeTypeAdaptor(dashboardResult, "dashboard");
@@ -866,7 +866,7 @@ public class DataVisualizationServer implements DataVisualizationApi {
             }
             return result;
         } else {
-            return coreVisualizationManage.tree(request);
+            return coreVisualizationManage.treeForCurrentIdentity(request);
         }
     }
 
@@ -885,7 +885,7 @@ public class DataVisualizationServer implements DataVisualizationApi {
     @Override
     public List<VisualizationResourceVO> findRecent(@RequestBody VisualizationWorkbranchQueryRequest request) {
         request.setQueryFrom("recent");
-        IPage<VisualizationResourceVO> result = coreVisualizationManage.query(1, 20, request);
+        IPage<VisualizationResourceVO> result = coreVisualizationManage.queryForCurrentIdentity(1, 20, request);
         List<VisualizationResourceVO> resourceVOS = result.getRecords();
         if (!CollectionUtils.isEmpty(resourceVOS)) {
             resourceVOS.forEach(item -> {

@@ -29,6 +29,7 @@ import io.dataease.exportCenter.util.ExportFileNameUtils;
 import io.dataease.extensions.view.dto.ChartViewDTO;
 import io.dataease.i18n.Translator;
 import io.dataease.license.config.XpackInteract;
+import io.dataease.license.utils.LicenseUtil;
 import io.dataease.log.DeLog;
 import io.dataease.model.ExportTaskDTO;
 import io.dataease.constant.XpackSettingConstants;
@@ -73,6 +74,9 @@ import java.util.stream.Collectors;
 @Component
 @Transactional(rollbackFor = Exception.class)
 public class ExportCenterManage implements BaseExportApi {
+    @Resource private io.dataease.localaccess.manage.LocalExportScope localExportScope;
+    private boolean localExport() { return io.dataease.localaccess.security.LocalAccessContext.get() != null; }
+
     @Resource
     private CoreExportTaskMapper exportTaskMapper;
     @Resource
@@ -188,10 +192,13 @@ public class ExportCenterManage implements BaseExportApi {
 
         List<ExportTaskDTO> records = pager.getRecords();
         records.forEach(exportTask -> {
+            if (localExport()) exportTask.setOrgName(io.dataease.localaccess.security.LocalAccessContext.require().tenantName());
             if (status.equalsIgnoreCase("ALL") || status.equalsIgnoreCase(exportTask.getExportStatus())) {
                 setExportFromAbsName(exportTask);
             }
-            if (status.equalsIgnoreCase("ALL") || status.equalsIgnoreCase(exportTask.getExportStatus())) {
+            if (!localExport() && LicenseUtil.licenseValid()
+                    && (status.equalsIgnoreCase("ALL") || status.equalsIgnoreCase(exportTask.getExportStatus()))) {
+                // Organization enrichment belongs to the licensed extension, not community exports.
                 proxy().setOrg(exportTask);
             }
         });
@@ -241,6 +248,11 @@ public class ExportCenterManage implements BaseExportApi {
         DataVisualizationInfo dataVisualizationInfo = visualizationInfoMapper.selectById(id);
         list.add(dataVisualizationInfo);
         if (dataVisualizationInfo.getPid().equals(dataVisualizationInfo.getId())) {
+            return list;
+        }
+        if (localExport() || !LicenseUtil.licenseValid()) {
+            getParent(list, dataVisualizationInfo);
+            Collections.reverse(list);
             return list;
         }
         try {
@@ -337,6 +349,7 @@ public class ExportCenterManage implements BaseExportApi {
         exportTask.setExportTime(System.currentTimeMillis());
         exportTask.setParams(JsonUtil.toJSONString(request).toString());
         exportTask.setExportMachineName(hostName());
+        if (localExport()) localExportScope.create(exportTask.getId(), exportTask.getExportFromType(), exportTask.getExportFrom());
         exportTaskMapper.insert(exportTask);
         String safeTaskId = validateExportTaskId(exportTask.getId());
         if (busiFlag.equalsIgnoreCase("dashboard")) {
@@ -361,6 +374,7 @@ public class ExportCenterManage implements BaseExportApi {
         exportTask.setExportTime(System.currentTimeMillis());
         exportTask.setParams(JsonUtil.toJSONString(request).toString());
         exportTask.setExportMachineName(hostName());
+        if (localExport()) localExportScope.create(exportTask.getId(), exportTask.getExportFromType(), exportTask.getExportFrom());
         exportTaskMapper.insert(exportTask);
         String safeTaskId = validateExportTaskId(exportTask.getId());
         exportCenterDownLoadManage.startDatasetTask(resolveExportTaskFileTarget(safeTaskId), exportTask.getExportFrom(), request);
@@ -380,6 +394,7 @@ public class ExportCenterManage implements BaseExportApi {
         exportTask.setExportTime(System.currentTimeMillis());
         exportTask.setParams(JsonUtil.toJSONString(request).toString());
         exportTask.setExportMachineName(hostName());
+        if (localExport()) localExportScope.create(exportTask.getId(), exportTask.getExportFromType(), exportTask.getExportFrom());
         exportTaskMapper.insert(exportTask);
         if (StringUtils.equals(exportFromType, "data_filling")) {
             String safeTaskId = validateExportTaskId(exportTask.getId());
@@ -407,7 +422,16 @@ public class ExportCenterManage implements BaseExportApi {
         VisualizationWatermark watermark = watermarkMapper.selectById("system_default");
         WatermarkContentDTO watermarkContent = JsonUtil.parseObject(watermark.getSettingContent(), WatermarkContentDTO.class);
         if (watermarkContent.getEnable() && watermarkContent.getExcelEnable()) {
-            UserFormVO userInfo = visualizationMapper.queryInnerUserInfo(currentUserId());
+            UserFormVO userInfo;
+            if (localExport()) {
+                var identity = io.dataease.localaccess.security.LocalAccessContext.require();
+                userInfo = new UserFormVO();
+                userInfo.setId(identity.userId());
+                userInfo.setAccount(identity.account());
+                userInfo.setName(identity.name());
+            } else {
+                userInfo = visualizationMapper.queryInnerUserInfo(currentUserId());
+            }
             // 在主逻辑中添加水印
             int watermarkPictureIdx = ExcelWatermarkUtils.addWatermarkImage(wb, watermarkContent, userInfo); // 生成水印图片并获取 ID
             for (Sheet sheet : wb) {
@@ -420,6 +444,9 @@ public class ExportCenterManage implements BaseExportApi {
     public String generateDownloadUri(String id) {
         String safeTaskId = validateExportTaskId(id);
         CoreExportTask exportTask = getCurrentUserExportTask(safeTaskId);
+        if (localExport() && !"SUCCESS".equals(exportTask.getExportStatus())) {
+            DEException.throwException("导出尚未完成，无法下载");
+        }
         long createTime = System.currentTimeMillis();
         CoreExportDownloadTask coreExportDownloadTask = coreExportDownloadTaskMapper.selectById(safeTaskId);
         if (coreExportDownloadTask != null) {
@@ -441,6 +468,7 @@ public class ExportCenterManage implements BaseExportApi {
         if (exportTask == null || !Objects.equals(exportTask.getUserId(), currentUserId)) {
             DEException.throwException("任务不存在");
         }
+        if (localExport()) localExportScope.requireCurrent(id);
         return exportTask;
     }
 
@@ -566,7 +594,7 @@ public class ExportCenterManage implements BaseExportApi {
             DEException.throwException(Translator.get("i18n_download_link_invalid"));
         }
         try {
-            Algorithm algorithm = Algorithm.HMAC256(resolveTicketSecret(exportTask.getUserId()));
+            Algorithm algorithm = Algorithm.HMAC256(resolveExportTicketSecret(exportTask));
             Verification verification = JWT.require(algorithm);
             JWTVerifier verifier = verification.build();
             DecodedJWT jwt = verifier.verify(ticket);
@@ -603,13 +631,19 @@ public class ExportCenterManage implements BaseExportApi {
     }
 
     private String buildDownloadTicket(CoreExportTask exportTask, long createTime, Long validTime) {
-        Algorithm algorithm = Algorithm.HMAC256(resolveTicketSecret(exportTask.getUserId()));
+        Algorithm algorithm = Algorithm.HMAC256(resolveExportTicketSecret(exportTask));
         return JWT.create()
             .withClaim("taskId", exportTask.getId())
             .withClaim("uid", exportTask.getUserId())
             .withClaim("ts", createTime)
             .withExpiresAt(new Date(createTime + validTime * 60 * 1000))
             .sign(algorithm);
+    }
+
+    private String resolveExportTicketSecret(CoreExportTask task) {
+        if (localExportScope != null && localExportScope.find(task.getId()) != null)
+            return localExportScope.downloadSecret(task.getId());
+        return resolveTicketSecret(task.getUserId());
     }
 
     private String resolveTicketSecret(Long userId) {

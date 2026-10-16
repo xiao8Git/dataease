@@ -1,4 +1,7 @@
 <script lang="tsx" setup>
+import { bindPreviewTicketSql } from './previewTicketSql'
+import type { TenantSqlCheck } from './tenantSqlCheck'
+import { isolateHistory } from '@codemirror/commands'
 import referencePlay from '@/assets/svg/reference-play.svg'
 import referenceSetting1 from '@/assets/svg/reference-setting.svg'
 import icon_preferences_outlined from '@/assets/svg/icon_preferences_outlined.svg'
@@ -30,6 +33,7 @@ import {
 } from 'vue'
 import { debounce } from 'lodash-es'
 import { useI18n } from '@/hooks/web/useI18n'
+import { useUserStoreWithOut } from '@/store/modules/user'
 import { Base64 } from 'js-base64'
 import FixedSizeList from 'element-plus-secondary/es/components/virtual-list/src/components/fixed-size-list.mjs'
 import { useWindowSize } from '@vueuse/core'
@@ -142,6 +146,7 @@ const referenceSetting = () => {
   if (!validateVariableNames()) {
     return
   }
+  Object.assign(ticketPreviewDraft, ticketPreview)
   showVariableMgm.value = true
   parseVariable()
 }
@@ -303,15 +308,12 @@ const mousedownDragH = () => {
 }
 
 const calculateHeight = (e: MouseEvent) => {
-  if (e.pageY - 164 < 64) {
-    dragHeight.value = 64
-    return
-  }
-  if (e.pageY - 164 > document.documentElement.clientHeight - 200) {
-    dragHeight.value = document.documentElement.clientHeight - 200
-    return
-  }
-  dragHeight.value = e.pageY - 164
+  const editor = document.getElementById('sql-editor')
+  const container = editor?.closest('.sql-code-right')
+  if (!editor || !container) return
+  const top = editor.getBoundingClientRect().top
+  const maxHeight = Math.max(64, container.getBoundingClientRect().bottom - top - 100)
+  dragHeight.value = Math.min(maxHeight, Math.max(64, e.clientY - top))
 }
 
 const calculateWidth = (e: MouseEvent) => {
@@ -405,6 +407,8 @@ const save = () => {
 }
 
 const close = () => {
+  Object.assign(ticketPreview, { tenant: '', user: '' })
+  Object.assign(ticketPreviewDraft, { tenant: '', user: '' })
   searchTable.value = ''
   state.plxTableData = []
   state.fields = []
@@ -435,16 +439,25 @@ const handleClose = () => {
   }
 }
 
+const ticketPreview = reactive({ tenant: '', user: '' })
+const ticketPreviewDraft = reactive({ tenant: '', user: '' })
 const dataPreviewLoading = ref(false)
 const getSQLPreview = () => {
   if (!validateVariableNames()) {
+    return
+  }
+  let previewSql: string
+  try {
+    previewSql = bindPreviewTicketSql(codeCom.value.state.doc.toString(), ticketPreview)
+  } catch {
+    ElMessage.warning(t('tenant_sql_check.preview_invalid'))
     return
   }
   parseVariable()
   dataPreviewLoading.value = true
   getPreviewSql({
     isCross: isCross.value,
-    sql: Base64.encode(setNameIdTrans('name', 'id', codeCom.value.state.doc.toString())),
+    sql: Base64.encode(setNameIdTrans('name', 'id', previewSql)),
     datasourceId: sqlNode.value.datasourceId,
     sqlVariableDetails: JSON.stringify(state.variables)
   })
@@ -612,10 +625,50 @@ const parseVariable = () => {
 }
 
 const saveVariable = () => {
+  try {
+    bindPreviewTicketSql("'__DE_TICKET_TENANT__' '__DE_TICKET_USER__'", ticketPreviewDraft)
+  } catch {
+    ElMessage.warning(t('tenant_sql_check.preview_invalid'))
+    return
+  }
+  Object.assign(ticketPreview, ticketPreviewDraft)
   state.variables = JSON.parse(JSON.stringify(state.variablesTmp))
   showVariableMgm.value = false
   changeFlagCode.value = true
   ElMessage.success(t('data_set.parameters_set_successfully'))
+}
+const tenantCheckResult = ref<TenantSqlCheck>({ tables: [], parsed: true })
+const tenantCoveredCount = computed(
+  () => tenantCheckResult.value.tables.filter(table => table.covered).length
+)
+const formattingSql = ref(false)
+const formatSql = async () => {
+  if (formattingSql.value || !codeCom.value) return
+  formattingSql.value = true
+  try {
+    const { formatDatasetSql } = await import('./formatSql')
+    const findType = (nodes: (DataSource & { type?: string })[]): string | undefined => {
+      for (const node of nodes || []) {
+        if (String(node.id) === String(sqlNode.value.datasourceId)) return node.type
+        const type = findType(node.children)
+        if (type) return type
+      }
+    }
+    const view = codeCom.value
+    const source = view.state.doc.toString()
+    const formatted = formatDatasetSql(source, findType(state.dataSourceList))
+    if (formatted !== source) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: formatted },
+        annotations: isolateHistory.of('full')
+      })
+    }
+    view.focus()
+  } catch {
+    ElMessage.warning(t('dataset_sql_format.failed'))
+  } finally {
+    formattingSql.value = false
+  }
 }
 const mousedownDrag = () => {
   document.querySelector('.sql-eidtor').addEventListener('mousemove', calculateWidth)
@@ -626,6 +679,33 @@ const mousedownDrag = () => {
   <div class="add-sql-name">
     <el-input class="name" ref="editorName" v-model="sqlNode.tableName" @change="setFlag" />
     <div class="save-or-cancel flex-align-center">
+      <el-tooltip
+        :content="
+          t(tenantCheckResult.parsed ? 'tenant_sql_check.hint' : 'tenant_sql_check.parse_failed')
+        "
+        placement="bottom"
+      >
+        <span class="tenant-check-summary">
+          <span class="tenant-status tenant-status-covered">
+            {{ t('tenant_sql_check.covered') }} <b>{{ tenantCoveredCount }}</b>
+          </span>
+          <span
+            class="tenant-status"
+            :class="{
+              'tenant-status-missing': tenantCheckResult.tables.length > tenantCoveredCount
+            }"
+          >
+            {{ t('tenant_sql_check.missing') }}
+            <b>{{ tenantCheckResult.tables.length - tenantCoveredCount }}</b>
+          </span>
+          <span v-if="!tenantCheckResult.parsed" class="tenant-status tenant-status-missing">
+            {{ t('tenant_sql_check.incomplete') }}
+          </span>
+        </span>
+      </el-tooltip>
+      <el-button :loading="formattingSql" @click="formatSql" text style="color: #1f2329">
+        {{ t('dataset_sql_format.action') }}
+      </el-button>
       <el-button @click="getSQLPreview" text style="color: #1f2329">
         <template #icon>
           <el-icon>
@@ -860,7 +940,18 @@ const mousedownDrag = () => {
       :class="showSysParams && 'p280'"
       :style="{ width: `calc(100% - ${showLeft ? LeftWidth : 0}px)` }"
     >
+      <el-alert
+        v-if="useUserStoreWithOut().localAccess"
+        class="shared-sql-hint"
+        type="warning"
+        show-icon
+        :closable="false"
+        :title="t('tenant_sql_check.shared_title')"
+        :description="t('tenant_sql_check.shared_hint')"
+      />
       <code-mirror
+        tenant-check
+        @tenant-check="tenantCheckResult = $event"
         @change="changeFlagCode = true"
         :height="`${dragHeight}px`"
         dom-id="sql-editor"
@@ -873,7 +964,7 @@ const mousedownDrag = () => {
             .map(ele => ele.name)
         "
       ></code-mirror>
-      <div class="sql-result" :style="{ height: `calc(100% - ${dragHeight}px)` }">
+      <div class="sql-result">
         <div class="sql-title">
           <span class="drag" @mousedown="mousedownDragH" />
         </div>
@@ -1031,6 +1122,42 @@ const mousedownDrag = () => {
     size="870px"
     direction="rtl"
   >
+    <section class="tenant-parameter-help">
+      <h3>{{ t('tenant_sql_check.preview_title') }}</h3>
+      <div class="tenant-preview-inputs">
+        <el-form label-position="top">
+          <el-form-item label="__DE_TICKET_TENANT__">
+            <el-input
+              v-model="ticketPreviewDraft.tenant"
+              clearable
+              maxlength="128"
+              :placeholder="t('tenant_sql_check.preview_tenant')"
+            />
+          </el-form-item>
+          <el-form-item label="__DE_TICKET_USER__">
+            <el-input
+              v-model="ticketPreviewDraft.user"
+              clearable
+              maxlength="128"
+              :placeholder="t('tenant_sql_check.preview_user')"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+      <p class="tenant-parameter-note">{{ t('tenant_sql_check.preview_hint') }}</p>
+    </section>
+    <section class="tenant-parameter-help">
+      <h3>{{ t('tenant_sql_check.parameters') }}</h3>
+      <div class="tenant-parameter-row">
+        <code>tenant_id</code>
+        <p>{{ t('tenant_sql_check.tenant_description') }}</p>
+      </div>
+      <div class="tenant-parameter-row">
+        <code>user_id</code>
+        <p>{{ t('tenant_sql_check.user_description') }}</p>
+      </div>
+      <p class="tenant-parameter-note">{{ t('tenant_sql_check.scope_description') }}</p>
+    </section>
     <div class="content">
       <el-icon style="font-size: 16px">
         <Icon name="icon_info_colorful"><icon_info_colorful class="svg-icon" /></Icon>
@@ -1179,6 +1306,99 @@ const mousedownDrag = () => {
 
 <style lang="less" scoped>
 @import '@/style/mixin.less';
+.tenant-check-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 16px;
+  padding-right: 16px;
+  border-right: 1px solid #e5e6eb;
+  white-space: nowrap;
+}
+.tenant-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #f2f3f5;
+  color: #646a73;
+  font-size: 12px;
+  line-height: 20px;
+  b {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.tenant-status-covered {
+  color: #16803c;
+  background: #edf8f0;
+}
+.tenant-status-missing {
+  color: #c4383d;
+  background: #fff0f0;
+}
+.tenant-preview-inputs {
+  padding: 16px;
+  :deep(.ed-form) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  :deep(.ed-form-item) {
+    margin-bottom: 0;
+  }
+}
+.tenant-parameter-help {
+  margin-bottom: 16px;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  overflow: hidden;
+  color: #1f2329;
+  h3 {
+    margin: 0;
+    padding: 14px 16px;
+    background: #f7f8fa;
+    border-bottom: 1px solid #e5e6eb;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 22px;
+  }
+}
+.tenant-parameter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 14px 16px;
+  & + & {
+    border-top: 1px solid #f0f1f3;
+  }
+  code {
+    flex: 0 0 88px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f0f4ff;
+    color: #315fbb;
+    font-size: 13px;
+    line-height: 22px;
+  }
+  p {
+    margin: 0;
+    color: #4e5969;
+    font-size: 13px;
+    line-height: 24px;
+    overflow-wrap: anywhere;
+  }
+}
+.tenant-parameter-note {
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e6eb;
+  background: #fafbfc;
+  color: #646a73;
+  font-size: 12px;
+  line-height: 22px;
+}
 .sql-eidtor {
   width: 100%;
   height: calc(100vh - 156px);
@@ -1338,10 +1558,21 @@ const mousedownDrag = () => {
   }
 
   .sql-code-right {
+    display: flex;
+    flex-direction: column;
     float: right;
     height: calc(100vh - 156px);
     position: relative;
+    .shared-sql-hint {
+      flex-shrink: 0;
+      border-radius: 0;
+    }
+    :deep(#sql-editor) {
+      flex-shrink: 0;
+    }
     .sql-result {
+      flex: 1;
+      min-height: 0;
       font-family: var(--de-custom_font, 'PingFang');
       font-size: 14px;
       overflow-y: auto;
@@ -1709,13 +1940,13 @@ const mousedownDrag = () => {
   }
 
   .content {
-    height: 80px;
-    width: 822px;
+    min-height: 80px;
+    width: 100%;
     border-radius: 6px;
     background: var(--ed-color-primary-1a, rgba(51, 112, 255, 0.1));
     position: relative;
     line-height: 22px;
-    padding: 9px 0 9px 40px;
+    padding: 12px 16px 12px 40px;
     font-family: var(--de-custom_font, 'PingFang');
     font-size: 14px;
     font-weight: 400;

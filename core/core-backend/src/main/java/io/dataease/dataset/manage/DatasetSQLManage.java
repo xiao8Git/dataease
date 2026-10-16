@@ -80,7 +80,7 @@ public class DatasetSQLManage {
     private CoreDatasetGroupMapper coreDatasetGroupMapper;
 
     private RowPermissionsApi getRowPermissionsApi() {
-        return rowPermissionsApi;
+        return io.dataease.localaccess.security.LocalAccessContext.get() == null ? rowPermissionsApi : null;
     }
 
     private static Logger logger = LoggerFactory.getLogger(DatasetSQLManage.class);
@@ -158,7 +158,7 @@ public class DatasetSQLManage {
             } else {
                 schema = putObj2Map(dsMap, datasetTable, isCross, coreDatasource);
             }
-            SQLObj table = getUnionTable(datasetTable, tableInfo, schema, i, filterParameters(chartExtRequest, currentDs.getId()), isFromDataSet, isCross, dsMap, tableFieldWithValues);
+            SQLObj table = getUnionTable(datasetTable, tableInfo, schema, i, filterParameters(chartExtRequest, currentDs.getId()), isFromDataSet, isCross, dsMap, tableFieldWithValues, unionDTO.getCurrentDsFields());
             if (i == 0) {
                 tableName = table;
             }
@@ -348,7 +348,7 @@ public class DatasetSQLManage {
             } else {
                 schema = putObj2Map(dsMap, datasetTable, isCross);
             }
-            SQLObj table = getUnionTable(datasetTable, tableInfo, schema, index, filterParameters(chartExtRequest, datasetTable.getId()), chartExtRequest == null, isCross, dsMap, tableFieldWithValues);
+            SQLObj table = getUnionTable(datasetTable, tableInfo, schema, index, filterParameters(chartExtRequest, datasetTable.getId()), chartExtRequest == null, isCross, dsMap, tableFieldWithValues, unionDTO.getCurrentDsFields());
 
             List<DatasetTableFieldDTO> fields = unionDTO.getCurrentDsFields();
             fields = fields.stream().filter(DatasetTableFieldDTO::getChecked).collect(Collectors.toList());
@@ -497,11 +497,24 @@ public class DatasetSQLManage {
         return getRowPermissionsApi().getUserById(AuthUtils.getUser().getUserId());
     }
 
-    private SQLObj getUnionTable(DatasetTableDTO currentDs, DatasetTableInfoDTO infoDTO, String tableSchema, int index, List<SqlVariableDetails> parameters, boolean isFromDataSet, boolean isCross, Map<Long, DatasourceSchemaDTO> dsMap, List<TableFieldWithValue> tableFieldWithValues) {
+    private SQLObj getUnionTable(DatasetTableDTO currentDs, DatasetTableInfoDTO infoDTO, String tableSchema, int index, List<SqlVariableDetails> parameters, boolean isFromDataSet, boolean isCross, Map<Long, DatasourceSchemaDTO> dsMap, List<TableFieldWithValue> tableFieldWithValues, List<DatasetTableFieldDTO> sourceFields) {
         SQLObj tableObj;
         String tableAlias = String.format(SQLConstants.TABLE_ALIAS_PREFIX, index);
         if (StringUtils.equalsIgnoreCase(currentDs.getType(), DatasetTableTypeConstants.DATASET_TABLE_DB)) {
             tableObj = SQLObj.builder().tableSchema(tableSchema).tableName(infoDTO.getTable()).tableAlias(tableAlias).build();
+            // Filter each physical table before joining, including the nullable side of outer joins.
+            var tenantField = sourceFields.stream()
+                    .filter(field -> "tenant_id".equalsIgnoreCase(field.getOriginName())).findFirst();
+            if (tenantField.isPresent()) {
+                DsTypeDTO type = getDatasourceType(dsMap, currentDs.getDatasourceId());
+                String prefix = isCross ? "`" : type.getPrefix();
+                String suffix = isCross ? "`" : type.getSuffix();
+                String source = TableUtils.getTableAndAlias(tableObj, type, isCross);
+                String tenant = io.dataease.share.manage.TicketScopeSql.bind(io.dataease.share.manage.TicketScopeSql.TENANT);
+                String sql = "SELECT * FROM " + source + " WHERE " + tableAlias + "."
+                        + prefix + tenantField.get().getOriginName() + suffix + " = " + tenant;
+                tableObj = SQLObj.builder().tableSchema("").tableName("(" + sql + ")").tableAlias(tableAlias).build();
+            }
         } else if (StringUtils.equalsIgnoreCase(currentDs.getType(), DatasetTableTypeConstants.DATASET_TABLE_SQL)) {
             Provider provider = ProviderFactory.getProvider(dsMap.entrySet().iterator().next().getValue().getType());
             // parser sql params and replace default value

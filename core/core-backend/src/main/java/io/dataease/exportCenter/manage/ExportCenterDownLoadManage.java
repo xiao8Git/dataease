@@ -83,6 +83,37 @@ import java.util.stream.Collectors;
 @Component
 @Transactional(rollbackFor = Exception.class)
 public class ExportCenterDownLoadManage {
+    @Resource private io.dataease.localaccess.manage.LocalExportScope localExportScope;
+
+    private Future<?> submitTask(String taskId, Runnable work) {
+        boolean local = io.dataease.localaccess.security.LocalAccessContext.get() != null;
+        java.util.concurrent.FutureTask<Void> task = new java.util.concurrent.FutureTask<>(() -> {
+            var oldUser = AuthUtils.getUser();
+            try {
+                if (local) {
+                    try (var context = localExportScope.open(taskId)) { work.run(); }
+                } else { work.run(); }
+            } catch (Exception e) {
+                updateExportTask(taskId, "FAILED", null, e.getMessage(), null, null);
+                LogUtil.error("Failed to execute tenant export", e);
+            } finally {
+                io.dataease.localaccess.security.LocalAccessContext.clear();
+                if (oldUser == null) AuthUtils.remove(); else AuthUtils.setUser(oldUser);
+                IPUtils.remove();
+            }
+            return null;
+        });
+        // A worker must not read task/scope rows until their transaction commits.
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void afterCommit() { scheduledThreadPoolExecutor.execute(task); }
+                    @Override public void afterCompletion(int status) { if (status != STATUS_COMMITTED) task.cancel(false); }
+                });
+        } else { scheduledThreadPoolExecutor.execute(task); }
+        return task;
+    }
+
     @Resource
     private CoreExportTaskMapper exportTaskMapper;
     @Resource
@@ -187,7 +218,7 @@ public class ExportCenterDownLoadManage {
         }
         exportTarget.createParentDirectory();
         TokenUserBO tokenUserBO = AuthUtils.getUser();
-        Future future = scheduledThreadPoolExecutor.submit(() -> {
+        Future future = submitTask(exportTarget.taskId(), () -> {
             AuthUtils.setUser(tokenUserBO);
             try {
                 updateExportTask(exportTarget.taskId(), "IN_PROGRESS", null, null, null, null);
@@ -217,11 +248,11 @@ public class ExportCenterDownLoadManage {
 
         TokenUserBO tokenUserBO = AuthUtils.getUser();
         String clientIp = IPUtils.get();
-        Future future = scheduledThreadPoolExecutor.submit(() -> {
+        Future future = submitTask(exportTarget.taskId(), () -> {
             IPUtils.set(clientIp);
-            LicenseUtil.validate();
+            if (io.dataease.localaccess.security.LocalAccessContext.get() == null) LicenseUtil.validate();
             AuthUtils.setUser(tokenUserBO);
-            try {
+            try (var scope = io.dataease.share.manage.TicketScopeSql.withExportScope(request.getScopeTenant(), request.getScopeUser())) {
                 updateExportTask(exportTarget.taskId(), "IN_PROGRESS", null, null, null, null);
                 CoreDatasetGroup coreDatasetGroup = coreDatasetGroupMapper.selectById(exportFrom);
                 if (coreDatasetGroup == null) {
@@ -468,9 +499,9 @@ public class ExportCenterDownLoadManage {
         exportTarget.createParentDirectory();
         TokenUserBO tokenUserBO = AuthUtils.getUser();
         String clientIp = IPUtils.get();
-        Future future = scheduledThreadPoolExecutor.submit(() -> {
+        Future future = submitTask(exportTarget.taskId(), () -> {
             IPUtils.set(clientIp);
-            LicenseUtil.validate();
+            if (io.dataease.localaccess.security.LocalAccessContext.get() == null) LicenseUtil.validate();
             AuthUtils.setUser(tokenUserBO);
             try {
                 updateExportTask(exportTarget.taskId(), "IN_PROGRESS", null, null, null, null);
@@ -615,6 +646,8 @@ public class ExportCenterDownLoadManage {
     }
 
     private void updateExportTaskSuccess(ExportTaskFileTarget exportTarget, String exportProgress) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null)
+            localExportScope.requireCurrent(exportTarget.taskId());
         try {
             ExportTaskFileTarget.FileSize fileSize = exportTarget.readFileSize();
             updateExportTask(exportTarget.taskId(), "SUCCESS", exportProgress, null, fileSize.size(), fileSize.unit());

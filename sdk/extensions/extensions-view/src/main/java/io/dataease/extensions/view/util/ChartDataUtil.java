@@ -1,7 +1,5 @@
 package io.dataease.extensions.view.util;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import io.dataease.extensions.datasource.model.SQLObj;
 import io.dataease.extensions.view.dto.*;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -21,7 +19,7 @@ public class ChartDataUtil {
         for (int i = 0; i < axisList.size(); i++) {
             dataIndexMap.put(axisList.get(i).getId(), i);
         }
-        if (CollectionUtils.isNotEmpty(sortPriority)) {
+        if (!(sortPriority==null || sortPriority.isEmpty())) {
             var tmp = new ArrayList<ChartViewFieldDTO>();
             var ids = new HashSet<Long>();
             for (SortAxis sortAxis : sortPriority) {

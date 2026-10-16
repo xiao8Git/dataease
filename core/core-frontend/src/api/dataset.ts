@@ -1,3 +1,4 @@
+import { previewScopeHeaders } from '@/utils/dashboardPreviewScope'
 import request from '@/config/axios'
 import {
   originNameHandle,
@@ -151,6 +152,7 @@ export const delDatasetTree = async (id): Promise<IResponse> => {
 export const exportDatasetData = (data = {}) => {
   return request.post({
     url: '/datasetTree/exportDataset',
+    headers: previewScopeHeaders(),
     method: 'post',
     data: data,
     loading: true,
@@ -195,28 +197,34 @@ export const getTableField = async (data): Promise<IResponse> => {
 export const getPreviewData = async (data): Promise<IResponse> => {
   const copyData = cloneDeep(data)
   originNameHandle(copyData.allFields)
-  return request.post({ url: '/datasetData/previewData', data: copyData }).then(res => {
-    if (res?.data?.allFields?.length) {
-      originNameHandleBack(res?.data?.allFields)
-    }
+  return request
+    .post({ url: '/datasetData/previewData', data: copyData, headers: previewScopeHeaders() })
+    .then(res => {
+      if (res?.data?.allFields?.length) {
+        originNameHandleBack(res?.data?.allFields)
+      }
 
-    if (res?.data?.data?.fields?.length) {
-      originNameHandleBack(res?.data?.data?.fields)
-    }
-    return res?.data
-  })
+      if (res?.data?.data?.fields?.length) {
+        originNameHandleBack(res?.data?.data?.fields)
+      }
+      return res?.data
+    })
 }
 
 export const getDatasetPreview = async (id): Promise<FieldData> => {
-  return request.post({ url: `/datasetTree/get/${id}`, data: {} }).then(res => {
-    return res?.data
-  })
+  return request
+    .post({ url: `/datasetTree/get/${id}`, data: {}, headers: previewScopeHeaders() })
+    .then(res => {
+      return res?.data
+    })
 }
 
 export const getDatasetTotal = async (id): Promise<FieldData> => {
-  return request.post({ url: `/datasetData/getDatasetTotal`, data: { id: id } }).then(res => {
-    return res?.data
-  })
+  return request
+    .post({ url: `/datasetData/getDatasetTotal`, data: { id: id }, headers: previewScopeHeaders() })
+    .then(res => {
+      return res?.data
+    })
 }
 
 export const getDatasetDetails = async (id): Promise<Dataset> => {

@@ -25,12 +25,14 @@ public class VisualizationStoreServer implements VisualizationStoreApi {
 
     @Override
     public void execute(VisualizationStoreRequest request) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null)
+            io.dataease.utils.CommonBeanFactory.getBean(io.dataease.localaccess.manage.LocalAccessManage.class).requireDashboard(request.getId());
         visualizationStoreManage.execute(request);
     }
 
     @Override
     public List<VisualizationStoreVO> query(VisualizationWorkbranchQueryRequest request) {
-        IPage<VisualizationStoreVO> iPage = visualizationStoreManage.query(1, 20, request);
+        IPage<VisualizationStoreVO> iPage = visualizationStoreManage.queryForCurrentIdentity(1, 20, request);
         List<VisualizationStoreVO> resourceVOS = iPage.getRecords();
         if (!CollectionUtils.isEmpty(resourceVOS)) {
             resourceVOS.forEach(item -> {
@@ -43,6 +45,8 @@ public class VisualizationStoreServer implements VisualizationStoreApi {
 
     @Override
     public boolean favorited(Long id) {
+        if (io.dataease.localaccess.security.LocalAccessContext.get() != null)
+            io.dataease.utils.CommonBeanFactory.getBean(io.dataease.localaccess.manage.LocalAccessManage.class).requireDashboard(id);
         return visualizationStoreManage.favorited(id);
     }
 }

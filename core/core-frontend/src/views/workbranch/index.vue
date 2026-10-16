@@ -6,7 +6,7 @@ import icon_operationAnalysis_outlined from '@/assets/svg/icon_operation-analysi
 import userImg from '@/assets/svg/user-img.svg'
 import icon_template_colorful from '@/assets/svg/icon_template_colorful.svg'
 import { useI18n } from '@/hooks/web/useI18n'
-import { ref, shallowRef, computed, reactive, watch } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import { usePermissionStoreWithOut } from '@/store/modules/permission'
 import { useRequestStoreWithOut } from '@/store/modules/request'
 import { interactiveStoreWithOut } from '@/store/modules/interactive'
@@ -34,7 +34,11 @@ const permissionStore = usePermissionStoreWithOut()
 const requestStore = useRequestStoreWithOut()
 const { t } = useI18n()
 const busiDataMap = computed(() => interactiveStore.getData)
-const busiCountCardList = ref([])
+const busiCountCardList = computed(() =>
+  Object.entries(busiDataMap.value)
+    .filter(([key]) => key !== '3')
+    .map(([, value]) => value)
+)
 const { wsCache } = useCache()
 const { push } = useRouter()
 const router = useRouter()
@@ -42,28 +46,34 @@ const resourceCreateOpt = ref(null)
 const embeddedStore = useEmbedded()
 const appStore = useAppStoreWithOut()
 const openType = wsCache.get('open-backend') === '1' ? '_self' : '_blank'
-const quickCreationList = shallowRef([
-  {
-    icon: icon_dashboard_outlined,
-    name: 'panel',
-    color: '#3370ff'
-  },
-  {
-    icon: icon_operationAnalysis_outlined,
-    name: 'screen',
-    color: '#00d6b9'
-  },
-  {
-    icon: icon_app_outlined,
-    name: 'dataset',
-    color: '#16c0ff'
-  },
-  {
-    icon: icon_database_outlined,
-    name: 'datasource',
-    color: '#7f3bf6'
-  }
-])
+const quickCreationList = computed(() =>
+  [
+    {
+      icon: icon_dashboard_outlined,
+      name: 'panel',
+      color: '#3370ff'
+    },
+    {
+      icon: icon_operationAnalysis_outlined,
+      name: 'screen',
+      color: '#00d6b9'
+    },
+    {
+      icon: icon_app_outlined,
+      name: 'dataset',
+      color: '#16c0ff'
+    },
+    {
+      icon: icon_database_outlined,
+      name: 'datasource',
+      color: '#7f3bf6'
+    }
+  ].map((item, index) => ({
+    ...item,
+    menuAuth: busiDataMap.value[index]?.menuAuth ?? false,
+    anyManage: busiDataMap.value[index]?.anyManage ?? false
+  }))
+)
 
 const expandFold = ref('fold')
 const handleExpandFold = () => {
@@ -167,17 +177,6 @@ const templateShowCur = templateItem => {
     templateTypeMarch = true
   }
   return templateTypeMarch
-}
-const fillCardInfo = () => {
-  for (const key in busiDataMap.value) {
-    if (key !== '3') {
-      busiCountCardList.value.push(busiDataMap.value[key])
-    }
-    if (quickCreationList.value[key]) {
-      quickCreationList.value[key]['menuAuth'] = busiDataMap.value[key]['menuAuth']
-      quickCreationList.value[key]['anyManage'] = busiDataMap.value[key]['anyManage']
-    }
-  }
 }
 const quickCreate = (flag: number, hasAuth: boolean) => {
   if (!hasAuth) {
@@ -305,7 +304,6 @@ const loadShareBase = () => {
   })
 }
 
-fillCardInfo()
 initMarketTemplate()
 loadShareBase()
 </script>

@@ -37,12 +37,27 @@ public class LocalResourcePermission {
             try { return CCJSqlParserUtil.parseCondExpression(predicate); }
             catch (Exception e) { throw new SecurityException("无法应用导出租户权限", e); }
         }
-        if (!user.permits("dataset") && java.util.Set.of("core_dataset_group", "core_dataset_table", "core_dataset_table_field").contains(name)) {
+        if (name.equals("core_datasource")) {
+            if (user.admin()) return null;
+            if (user.tenantId() == null) return expression("1=0");
+            return expression("(NOT EXISTS (SELECT 1 FROM de_local_datasource_grant sg WHERE sg.tenant_id=" + user.tenantId()
+                    + ") OR EXISTS (SELECT 1 FROM de_local_datasource_grant sg WHERE sg.tenant_id=" + user.tenantId()
+                    + " AND sg.datasource_id=" + alias + ".id) OR " + alias + ".type='folder')");
+        }
+        if (java.util.Set.of("core_dataset_group", "core_dataset_table", "core_dataset_table_field").contains(name)) {
+            if (user.admin()) return null;
+            if (user.tenantId() == null) return expression("1=0");
             String field = name.equals("core_dataset_group") ? "id" : "dataset_group_id";
-            String condition = user.tenantId() == null ? "1=0" : alias + "." + field
+            String datasetAlias = name.equals("core_dataset_group") ? alias : "vd";
+            String visible = "(NOT EXISTS (SELECT 1 FROM de_local_dataset_grant dg WHERE dg.tenant_id=" + user.tenantId()
+                    + ") OR EXISTS (SELECT 1 FROM de_local_dataset_grant dg WHERE dg.tenant_id=" + user.tenantId()
+                    + " AND dg.dataset_id=" + datasetAlias + ".id) OR " + datasetAlias + ".create_by='" + user.userId()
+                    + "' OR " + datasetAlias + ".node_type='folder')";
+            String condition = name.equals("core_dataset_group") ? visible
+                    : "EXISTS (SELECT 1 FROM core_dataset_group vd WHERE vd.id=" + alias + "." + field + " AND " + visible + ")";
+            if (!user.permits("dataset") && !user.permits("dashboard_edit")) condition += " AND " + alias + "." + field
                     + " IN (SELECT c.table_id FROM core_chart_view c JOIN de_local_dashboard_grant g ON c.scene_id=g.resource_id WHERE g.tenant_id=" + user.tenantId() + ")";
-            try { return CCJSqlParserUtil.parseCondExpression(condition); }
-            catch (Exception e) { throw new SecurityException("无法应用看板数据集权限", e); }
+            return expression(condition);
         }
         String column = switch (name) {
             case "data_visualization_info", "snapshot_data_visualization_info" -> "id";
@@ -63,5 +78,9 @@ public class LocalResourcePermission {
         }
         try { return CCJSqlParserUtil.parseCondExpression(predicate); }
         catch (Exception e) { throw new SecurityException("无法应用租户资源权限", e); }
+    }
+    private static Expression expression(String predicate) {
+        try { return CCJSqlParserUtil.parseCondExpression(predicate); }
+        catch (Exception e) { throw new SecurityException("无法应用数据集访问权限", e); }
     }
 }

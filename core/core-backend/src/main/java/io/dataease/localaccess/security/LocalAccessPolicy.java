@@ -35,12 +35,24 @@ public final class LocalAccessPolicy {
 
         if (module.equals("datasetData") && Set.of("enumValue", "enumValueObj", "getFieldTree").contains(operation))
             return user.permits("dashboard") || user.permits("dataset");
+        if (module.equals("datasetTree") && operation.equals("delete"))
+            return user.permits("dataset") && user.permits("dataset_delete");
+        if (module.equals("datasetTree") && Set.of("tree", "get", "details", "dsDetails", "getSqlParams", "detailWithPerm").contains(operation)
+                && user.permits("dashboard") && user.permits("dashboard_edit")) return true;
+        if (module.equals("datasetField") && Set.of("get", "listByDatasetGroup", "listByDsIds", "listByDQ", "listWithPermissions", "multFieldValues", "getFunction", "save", "delete", "deleteByChartId").contains(operation)
+                && user.permits("dashboard") && user.permits("dashboard_edit")) return true;
         if (Set.of("datasetTree", "datasetData", "datasetField", "datasetTable", "datasetTableSqlLog", "dataAssistant").contains(module))
             return user.permits("dataset");
         if (module.equals("datasource") && Set.of("tree", "getTables", "getTableField", "getSchema").contains(operation))
             return user.permits("dataset");
         if (Set.of("datasource", "driver", "datasourceDriver").contains(module)) return false;
         if (module.equals("store")) return user.permits("dashboard") && Set.of("query", "favorited", "execute").contains(operation);
+        if (module.equals("dataVisualization") && operation.equals("deleteLogic"))
+            return user.permits("dashboard") && user.permits("dashboard_delete");
+        if (module.equals("dataVisualization") && Set.of("saveCanvas", "nameCheck", "updateCanvas", "updatePublishStatus", "recoverToPublished", "updateBase", "checkCanvasChange", "updateCheckVersion").contains(operation))
+            return user.permits("dashboard") && user.permits("dashboard_edit");
+        if (module.equals("chart") && Set.of("listByDQ", "save", "checkSameDataSet", "copyField", "deleteField", "deleteFieldByChart").contains(operation))
+            return user.permits("dashboard") && user.permits("dashboard_edit");
         if (Set.of("dataVisualization", "chart", "chartData", "linkage", "linkJump", "outerParams",
                 "visualizationBackground", "visualizationSubject", "watermark").contains(module))
             return user.permits("dashboard") && (DASHBOARD_READ.contains(operation) || user.admin());

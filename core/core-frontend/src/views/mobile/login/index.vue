@@ -42,25 +42,6 @@ const showMfa = ref(false)
 const mfaData = ref({ enabled: false, ready: false, uid: '', origin: 0 })
 const loginType = ref('default')
 const showPlatLoginMask = ref(true)
-const checkUsername = value => {
-  if (!value) {
-    return true
-  }
-  const pattern = /^[a-zA-Z0-9][a-zA-Z0-9\@._-]*$/
-  const reg = new RegExp(pattern)
-  return reg.test(value)
-}
-
-const validatePwd = value => {
-  if (!value) {
-    return true
-  }
-  const pattern =
-    /^.*(?=.{6,20})(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[~!@#$%^&*()_+\-\={}|":<>?`[\];',.\/])[a-zA-Z0-9~!@#$%^&*()_+\-\={}|":<>?`[\];',.\/]*$/
-  const regep = new RegExp(pattern)
-  return regep.test(value)
-}
-
 const visible = ref(true)
 const clickRightIcon = () => {
   visible.value = !visible.value
@@ -110,14 +91,6 @@ const mfaSuccess = () => {
   router.push({ path: '/index' })
 }
 const onSubmit = async () => {
-  if (!checkUsername(username.value) || !validatePwd(password.value)) {
-    showToast({
-      duration: 2000,
-      message: '用户名、密码不对',
-      className: 'de-mobile-error'
-    })
-    return
-  }
   const name = username.value.trim()
   const pwd = password.value
   if (!wsCache.get(appStore.getDekey)) {
@@ -145,7 +118,12 @@ const onSubmit = async () => {
   loginApi(param)
     .then(res => {
       const { token, exp, mfa } = res.data
-      if (!isLdap && !xpackLoadFail.value && xpackInvalidPwd.value?.invokeMethod) {
+      if (
+        res.data.localAccess !== true &&
+        !isLdap &&
+        !xpackLoadFail.value &&
+        xpackInvalidPwd.value?.invokeMethod
+      ) {
         const param = {
           methodName: 'init',
           args: res.data
@@ -213,7 +191,13 @@ const loadFail = () => {
   <div class="de-mobile-login" v-loading="duringLogin">
     <img class="mobile-login_bg" :src="mobileLoginBg ? mobileLoginBg : mobileWholeBg" alt="" />
     <div class="mobile-login-content">
-      <img width="120" height="31" :src="mobileLogin ? mobileLogin : mobileDeTop" alt="" />
+      <img
+        class="mobile-login-logo"
+        width="120"
+        height="31"
+        :src="mobileLogin ? mobileLogin : mobileDeTop"
+        alt=""
+      />
       <div class="mobile-login-welcome">
         {{ loginType === 'ldap' ? t('login.ldap_login') : t('login.account_login') }}
       </div>
@@ -332,6 +316,10 @@ const loadFail = () => {
     --van-cell-vertical-padding: 12px;
     --van-button-default-height: 48px;
     --van-field-placeholder-text-color: #8f959e;
+
+    .mobile-login-logo {
+      object-fit: contain;
+    }
 
     .input-focus-primary {
       border-color: var(--ed-color-primary) !important;

@@ -44,6 +44,8 @@ public class WhitelistUtils {
             "/sysParameter/defaultSettings",
             "/setting/authentication/status",
             "/sysParameter/ui",
+            "/localAccess/branding",
+            "/localAccess/branding/image",
             "/sysParameter/defaultLogin",
             "/embedded/initIframe",
             "/sysParameter/i18nOptions",

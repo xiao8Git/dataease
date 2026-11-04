@@ -41,6 +41,7 @@ public class LocalAccessInterceptor implements HandlerInterceptor {
                         "localAccess", true)), 200);
             }
             if (LocalAccessPolicy.PUBLIC.contains(path)) return true;
+            if ("GET".equals(request.getMethod()) && (path.equals("/localAccess/branding") || path.equals("/localAccess/branding/image"))) return true;
             // The download controller verifies a short-lived, single-use task ticket.
             if ("GET".equals(request.getMethod()) && path.matches("/exportCenter/download/[0-9]+")) return true;
             if ("GET".equals(request.getMethod()) && (path.startsWith("/xpackComponent/content/")
@@ -54,7 +55,8 @@ public class LocalAccessInterceptor implements HandlerInterceptor {
             if (path.equals("/user/info") || path.equals("/user/personInfo") || path.equals("/user/ipInfo")) {
                 return reply(response, ResultMessage.success(Map.of("id", Long.toString(user.userId()), "account", user.account(),
                         "name", user.name(), "oid", user.tenantId() == null ? "0" : user.tenantId().toString(),
-                        "language", manage.language(), "model", "lose", "localAccess", true)), 200);
+                        "language", manage.language(), "model", "lose", "localAccess", true,
+                        "platformAdmin", user.admin(), "localPermissions", user.permissions())), 200);
             }
             if (path.equals("/org/mounted")) return reply(response, ResultMessage.success(manage.session().tenants()), 200);
             if (path.equals("/login/refresh")) return reply(response, ResultMessage.success(manage.refresh()), 200);

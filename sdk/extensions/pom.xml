@@ -34,7 +34,17 @@
             <groupId>io.dataease</groupId>
             <artifactId>dataease-license-sdk</artifactId>
             <version>${project.version}</version>
+            <scope>system</scope>
+            <systemPath>/Users/xiao8/wd/ws/dataease/lib/dataease-license-sdk-2.10.27.jar</systemPath>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>fit2cloud-public</id>
+            <name>Fit2cloud Public</name>
+            <url>https://repository.fit2cloud.com/repository/fit2cloud-public/</url>
+        </repository>
+    </repositories>
 
 </project>

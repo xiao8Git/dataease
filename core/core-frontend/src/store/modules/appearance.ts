@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { store } from '@/store/index'
 import { defaultFont, list } from '@/api/font'
 import { uiLoadApi } from '@/api/login'
+import { localBranding } from '@/api/localAccess'
 import { useCache } from '@/hooks/web/useCache'
 import colorFunctions from 'less/lib/less/functions/color.js'
 import colorTree from 'less/lib/less/tree/color.js'
@@ -13,6 +14,7 @@ const basePath = import.meta.env.VITE_API_BASEPATH
 const baseUrl = basePath + '/appearance/image/'
 import { isBtnShow } from '@/utils/utils'
 interface AppearanceState {
+  localLogo?: string
   themeColor?: string
   customColor?: string
   navigateBg?: string
@@ -43,6 +45,7 @@ export const useAppearanceStore = defineStore('appearanceStore', {
   state: (): AppearanceState => {
     return {
       themeColor: '',
+      localLogo: '',
       customColor: '',
       navigateBg: '',
       navigate: '',
@@ -70,12 +73,14 @@ export const useAppearanceStore = defineStore('appearanceStore', {
   },
   getters: {
     getNavigate(): string {
+      if (this.localLogo) return basePath + this.localLogo
       if (this.navigate) {
         return baseUrl + this.navigate
       }
       return null
     },
     getMobileLogin(): string {
+      if (this.localLogo) return basePath + this.localLogo
       if (this.mobileLogin) {
         return baseUrl + this.mobileLogin
       }
@@ -106,6 +111,7 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       return null
     },
     getLogin(): string {
+      if (this.localLogo) return basePath + this.localLogo
       if (this.login) {
         return baseUrl + this.login
       }
@@ -247,7 +253,8 @@ export const useAppearanceStore = defineStore('appearanceStore', {
       if (!isDataEaseBi) {
         document.title = ''
       }
-      const res = await uiLoadApi()
+      const [res, branding] = await Promise.all([uiLoadApi(), localBranding().catch(() => null)])
+      this.localLogo = branding?.data?.logoUrl || ''
       this.loaded = true
       const resData = res.data
       if (!resData?.length) {

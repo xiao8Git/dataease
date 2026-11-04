@@ -2055,13 +2055,14 @@ public class CalciteProvider extends Provider {
     }
 
     public void exec(EngineRequest engineRequest) throws Exception {
-        EngineProvider.validateSingleStatement(engineRequest.getQuery());
+        String sql = engineRequest.getInternalWriteQuery();
+        EngineProvider.validateSingleStatement(sql);
         DatasourceConfiguration configuration = JsonUtil.parseObject(engineRequest.getEngine().getConfiguration(), DatasourceConfiguration.class);
         int queryTimeout = configuration.getQueryTimeout();
         DatasourceDTO datasource = new DatasourceDTO();
         BeanUtils.copyBean(datasource, engineRequest.getEngine());
         try (Connection connection = getConnectionFromPool(datasource.getId()); Statement stat = getStatement(connection, queryTimeout)) {
-            PreparedStatement preparedStatement = connection.prepareStatement(engineRequest.getQuery());
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
             preparedStatement.setQueryTimeout(queryTimeout);
             Boolean result = preparedStatement.execute();
         } catch (Exception e) {

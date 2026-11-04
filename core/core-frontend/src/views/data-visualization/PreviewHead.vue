@@ -23,6 +23,7 @@ import { useShareStoreWithOut } from '@/store/modules/share'
 import { exportPermission } from '@/utils/utils'
 import { useCache } from '@/hooks/web/useCache'
 import { isDesktop } from '@/utils/ModelUtil'
+import { localAllows, useUserStoreWithOut } from '@/store/modules/user'
 
 const shareStore = useShareStoreWithOut()
 const { wsCache } = useCache('localStorage')
@@ -48,7 +49,9 @@ const preview = () => {
 }
 const isDataEaseBi = computed(() => appStore.getIsDataEaseBi)
 const isIframe = computed(() => appStore.getIsIframe)
-const shareDisable = computed(() => shareStore.getShareDisable || isDesktop())
+const shareDisable = computed(
+  () => shareStore.getShareDisable || isDesktop() || useUserStoreWithOut().localAccess
+)
 const exportPermissions = computed(() =>
   exportPermission(dvInfo.value['weight'], dvInfo.value['ext'])
 )
@@ -181,7 +184,12 @@ const initOpenHandler = newWindow => {
         :weight="dvInfo.weight"
         :resource-type="dvInfo.type"
       />
-      <el-button class="custom-button" v-if="dvInfo.weight > 6" type="primary" @click="dvEdit()">
+      <el-button
+        class="custom-button"
+        v-if="dvInfo.weight > 6 && localAllows('dashboard_edit')"
+        type="primary"
+        @click="dvEdit()"
+      >
         <template #icon>
           <icon name="icon_edit_outlined"><icon_edit_outlined class="svg-icon" /></icon>
         </template>

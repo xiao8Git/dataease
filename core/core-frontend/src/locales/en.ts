@@ -20,6 +20,15 @@ export default {
     new_role: 'New role',
     features: 'Available features',
     dashboard: 'View dashboards and screens',
+    dashboard_edit: 'Edit dashboards and screens',
+    dashboard_delete: 'Delete dashboards and screens',
+    dataset_delete: 'Delete datasets',
+    branding: 'Logo settings',
+    logo: 'Platform logo',
+    logo_help:
+      'Upload a PNG/JPG up to 2MB and 4096×4096 pixels. Applies to navigation and login for all tenants.',
+    upload_logo: 'Upload logo',
+    reset_logo: 'Restore default',
     dataset: 'Manage datasets',
     datasource: 'Manage data sources',
     users: 'Users',
@@ -32,6 +41,14 @@ export default {
     grant_help:
       'Selected dashboards are available to this tenant. Queries always use the current tenant. An empty selection grants no dashboards.',
     choose_dashboards: 'Select dashboards or screens',
+    dataset_grants: 'Visible datasets',
+    dataset_grant_help:
+      'An empty selection allows all datasets. Otherwise, regular tenant users can access selected datasets and datasets they created. Dataset management still requires the role feature. Administrators are unrestricted.',
+    choose_datasets: 'Select visible datasets (empty means all)',
+    datasource_grants: 'Visible datasources',
+    datasource_grant_help:
+      'An empty selection allows all datasources. Otherwise, regular tenant users can access only selected datasources. Dataset management still requires the role feature. Administrators are unrestricted.',
+    choose_datasources: 'Select visible datasources (empty means all)',
     save: 'Save',
     saved: 'Saved',
     tenant: 'Tenant',

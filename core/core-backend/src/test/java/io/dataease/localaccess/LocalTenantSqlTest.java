@@ -1,6 +1,10 @@
 package io.dataease.localaccess;
 
 import io.dataease.localaccess.security.LocalTenantSql;
+import io.dataease.localaccess.security.LocalAccessContext;
+import io.dataease.datasource.provider.EngineProvider;
+import io.dataease.datasource.request.EngineRequest;
+import io.dataease.extensions.datasource.dto.QueryScope;
 import org.junit.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -41,5 +45,48 @@ public class LocalTenantSqlTest {
         jdbc.execute("CREATE TABLE unscoped(secret VARCHAR(20))");
         jdbc.execute("INSERT INTO unscoped VALUES('secret')");
         assertThrows(org.springframework.dao.DataAccessException.class, () -> jdbc.queryForList(LocalTenantSql.rewrite("SELECT * FROM unscoped", "a")));
+    }
+    @Test public void importsExcelWhileReadsRemainTenantScoped() {
+        withExcelScope(() -> {
+            writeExcel("CREATE TABLE excel_facts(tenant_id VARCHAR(20), amount INT)");
+            writeExcel("INSERT INTO excel_facts VALUES('wunding',25600),('other',900000)");
+            EngineRequest read = engineRequest("SELECT SUM(amount) FROM excel_facts");
+            assertEquals(25600, jdbc.queryForObject(read.getQuery(), Integer.class).intValue());
+            assertTrue(read.getQuery().contains("WHERE tenant_id = 'wunding'"));
+        });
+    }
+    @Test public void engineDatasetQueriesStillRejectWritesAndMultipleStatements() {
+        withExcelScope(() -> {
+            assertThrows(SecurityException.class, () -> engineRequest("CREATE TABLE forbidden(id INT)").getQuery());
+            assertThrows(SecurityException.class, () -> engineRequest("INSERT INTO forbidden VALUES(1)").getQuery());
+            assertThrows(SecurityException.class, () -> engineRequest("SELECT 1; SELECT 2").getQuery());
+            assertThrows(RuntimeException.class, () -> writeExcel("CREATE TABLE forbidden(id INT); DROP TABLE forbidden"));
+        });
+    }
+    @Test public void engineDatasetReadsStillRequireTenantSelection() {
+        withExcelScope(() -> {
+            LocalAccessContext.set(new LocalAccessContext.Identity(1L, "admin", "admin", true, null, null, null, null, java.util.Set.of("dataset")));
+            assertThrows(SecurityException.class, () -> engineRequest("SELECT * FROM excel_facts").getQuery());
+        });
+    }
+    private void withExcelScope(Runnable task) {
+        QueryScope.install(new LocalTenantSql()::scopeQuery);
+        LocalAccessContext.set(new LocalAccessContext.Identity(1L, "admin", "admin", true, 1L, "wunding", "问鼎", null, java.util.Set.of("dataset")));
+        try {
+            task.run();
+        } finally {
+            LocalAccessContext.clear();
+            QueryScope.install(java.util.function.UnaryOperator.identity());
+        }
+    }
+    private void writeExcel(String sql) {
+        String command = engineRequest(sql).getInternalWriteQuery();
+        EngineProvider.validateSingleStatement(command);
+        jdbc.execute(command);
+    }
+    private EngineRequest engineRequest(String sql) {
+        EngineRequest request = new EngineRequest();
+        request.setQuery(sql);
+        return request;
     }
 }

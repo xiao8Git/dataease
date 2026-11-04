@@ -3,11 +3,14 @@ import { store } from '../index'
 import { useCache } from '@/hooks/web/useCache'
 import { useLocaleStoreWithOut } from './locale'
 import { useLocale } from '@/hooks/web/useLocale'
+import type { Feature } from '@/api/localAccess'
 const { wsCache } = useCache()
 const { changeLocale } = useLocale()
 
 interface UserState {
   localAccess: boolean
+  platformAdmin: boolean
+  localPermissions: Feature[]
   token: string
   uid: string
   name: string
@@ -21,6 +24,8 @@ export const userStore = defineStore('user', {
   state: (): UserState => {
     return {
       localAccess: false,
+      platformAdmin: false,
+      localPermissions: [],
       token: null,
       uid: null,
       name: null,
@@ -59,6 +64,8 @@ export const userStore = defineStore('user', {
       const res = await user.userInfo()
       const data = res.data
       this.localAccess = data.localAccess === true
+      this.platformAdmin = data.platformAdmin === true
+      this.localPermissions = data.localPermissions || []
       wsCache.set('user.localAccess', this.localAccess)
       data.token = wsCache.get('user.token')
       data.exp = wsCache.get('user.exp')
@@ -111,6 +118,9 @@ export const userStore = defineStore('user', {
       changeLocale(language as any)
     },
     clear() {
+      this.localAccess = false
+      this.platformAdmin = false
+      this.localPermissions = []
       wsCache.delete('user.localAccess')
       const keys: string[] = ['token', 'uid', 'name', 'oid', 'language', 'exp', 'time']
       keys.forEach(key => wsCache.delete('user.' + key))
@@ -120,4 +130,9 @@ export const userStore = defineStore('user', {
 
 export const useUserStoreWithOut = () => {
   return userStore(store)
+}
+
+export const localAllows = (feature: Feature) => {
+  const user = useUserStoreWithOut()
+  return !user.localAccess || user.platformAdmin || user.localPermissions.includes(feature)
 }

@@ -1,4 +1,5 @@
 <script lang="tsx" setup>
+import { localAllows } from '@/store/modules/user'
 import PreviewScopeSettings from '@/components/visualization/PreviewScopeSettings.vue'
 import icon_copy_filled from '@/assets/svg/icon_copy_filled.svg'
 import icon_dataset from '@/assets/svg/icon_dataset.svg'
@@ -819,7 +820,7 @@ const mouseleave = () => {
 }
 
 const getMenuList = (val: boolean) => {
-  return !val
+  const items = !val
     ? menuList
     : [
         {
@@ -828,6 +829,7 @@ const getMenuList = (val: boolean) => {
           command: 'copy'
         }
       ].concat(menuList)
+  return items.filter(item => item.command !== 'delete' || localAllows('dataset_delete'))
 }
 
 const proxyAllowDrop = throttle((arg1, arg2) => {

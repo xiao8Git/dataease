@@ -138,6 +138,10 @@
             <artifactId>easyexcel</artifactId>
             <exclusions>
                 <exclusion>
+                    <groupId>org.ehcache</groupId>
+                    <artifactId>ehcache</artifactId>
+                </exclusion>
+                <exclusion>
                     <artifactId>commons-io</artifactId>
                     <groupId>commons-io</groupId>
                 </exclusion>

@@ -1,6 +1,12 @@
 import request from '@/config/axios'
 
-export type Feature = 'dashboard' | 'dataset' | 'datasource'
+export type Feature =
+  | 'dashboard'
+  | 'dataset'
+  | 'datasource'
+  | 'dashboard_edit'
+  | 'dashboard_delete'
+  | 'dataset_delete'
 export interface Tenant {
   id?: string
   code: string
@@ -30,6 +36,15 @@ export interface Dashboard {
   name: string
   type: string
 }
+export interface DatasetResource {
+  id: string
+  name: string
+}
+export interface DatasourceResource {
+  id: string
+  name: string
+  type: string
+}
 export interface LocalSession {
   enabled: boolean
   platformAdmin: boolean
@@ -53,3 +68,20 @@ export const localDashboards = () => request.get({ url: `${base}/dashboards` })
 export const localGrants = (id: string) => request.get({ url: `${base}/grants/${id}` })
 export const saveLocalGrants = (tenantId: string, resourceIds: string[]) =>
   request.post({ url: `${base}/grants`, data: { tenantId, resourceIds } })
+export const localDatasets = () => request.get({ url: `${base}/datasets` })
+export const localDatasetGrants = (id: string) =>
+  request.get({ url: `${base}/datasetGrants/${id}` })
+export const saveLocalDatasetGrants = (tenantId: string, datasetIds: string[]) =>
+  request.post({ url: `${base}/datasetGrants`, data: { tenantId, datasetIds } })
+export const localDatasources = () => request.get({ url: `${base}/datasources` })
+export const localDatasourceGrants = (id: string) =>
+  request.get({ url: `${base}/datasourceGrants/${id}` })
+export const saveLocalDatasourceGrants = (tenantId: string, datasourceIds: string[]) =>
+  request.post({ url: `${base}/datasourceGrants`, data: { tenantId, datasourceIds } })
+export const localBranding = () => request.get({ url: `${base}/branding` })
+export const uploadLocalLogo = (file: File) => {
+  const data = new FormData()
+  data.append('file', file)
+  return request.post({ url: `${base}/branding/logo`, data, headersType: 'multipart/form-data' })
+}
+export const resetLocalLogo = () => request.delete({ url: `${base}/branding/logo` })

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localAllows } from '@/store/modules/user'
 import dvFilter from '@/assets/svg/dv-filter.svg'
 import dvMaterial from '@/assets/svg/dv-material.svg'
 import dvMedia from '@/assets/svg/dv-media.svg'
@@ -477,7 +478,7 @@ const fullScreenPreview = () => {
         </el-tooltip>
         <div v-show="editMode === 'edit'" class="divider"></div>
         <el-button
-          v-if="editMode === 'preview'"
+          v-if="editMode === 'preview' && localAllows('dashboard_edit')"
           icon="EditPen"
           @click="edit()"
           class="preview-button"

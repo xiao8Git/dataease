@@ -99,7 +99,8 @@ public class CoreVisualizationManage {
         }
         // 如果是编辑界面 只展示已发布的资源
         if (CommonConstants.RESOURCE_TABLE.SNAPSHOT.equals(request.getResourceTable())) {
-            queryWrapper.in("status", Arrays.asList(1, 2));
+            var local = io.dataease.localaccess.security.LocalAccessContext.get();
+            if (local == null || !local.permits("dashboard_edit")) queryWrapper.in("status", Arrays.asList(1, 2));
         }
         queryWrapper.orderByDesc("create_time");
         List<VisualizationNodePO> pos = extMapper.queryNodes(queryWrapper);
@@ -229,7 +230,8 @@ public class CoreVisualizationManage {
 
     private int localWeight(int original) {
         var local = io.dataease.localaccess.security.LocalAccessContext.get();
-        return local != null && !local.admin() ? 1 : original;
+        if (local == null || local.admin() || local.permits("dashboard_edit")) return original;
+        return original == 9 && local.permits("dashboard_delete") ? 7 : 1;
     }
 
     private boolean isTopNode(Long pid) {

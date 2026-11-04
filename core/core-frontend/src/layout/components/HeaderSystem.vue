@@ -57,6 +57,12 @@ const navigate = computed(() => appearanceStore.getNavigate)
     width: 134px;
     height: 34px;
   }
+  img.logo {
+    object-fit: contain;
+    background: #fff;
+    padding: 3px;
+    border-radius: 3px;
+  }
 
   .de-logo {
     color: #ffffff;

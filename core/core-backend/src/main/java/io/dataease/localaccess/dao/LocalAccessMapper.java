@@ -7,6 +7,20 @@ import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface LocalAccessMapper {
+    @Select("SELECT id,name,type FROM core_datasource WHERE type<>'folder' ORDER BY name,id") List<DatasourceResource> datasources();
+    @Select("SELECT id,name,type FROM core_datasource WHERE id=#{id}") DatasourceResource datasource(long id);
+    @Select("SELECT DISTINCT datasource_id FROM core_dataset_table WHERE dataset_group_id=#{id} AND datasource_id>0") List<Long> datasetDatasourceIds(long id);
+    @Select("SELECT datasource_id FROM de_local_datasource_grant WHERE tenant_id=#{tenantId} ORDER BY datasource_id") List<Long> datasourceGrants(long tenantId);
+    @Delete("DELETE FROM de_local_datasource_grant WHERE tenant_id=#{tenantId}") void clearDatasourceGrants(long tenantId);
+    @Insert("INSERT INTO de_local_datasource_grant(tenant_id,datasource_id) VALUES(#{tenantId},#{datasourceId})") void insertDatasourceGrant(@Param("tenantId") long tenantId, @Param("datasourceId") long datasourceId);
+    record DatasetRow(Long id, Long pid, String nodeType, String createBy) { }
+    @Select("SELECT id,name FROM core_dataset_group WHERE node_type='dataset' ORDER BY name,id") List<DatasetResource> datasets();
+    @Select("SELECT id,pid,node_type,create_by FROM core_dataset_group WHERE id=#{id}") DatasetRow dataset(long id);
+    @Select("SELECT id,pid,node_type,create_by FROM core_dataset_group") List<DatasetRow> datasetNodes();
+    @Select("SELECT dataset_group_id FROM core_dataset_table_field WHERE id=#{id}") Long fieldDataset(long id);
+    @Select("SELECT dataset_id FROM de_local_dataset_grant WHERE tenant_id=#{tenantId} ORDER BY dataset_id") List<Long> datasetGrants(long tenantId);
+    @Delete("DELETE FROM de_local_dataset_grant WHERE tenant_id=#{tenantId}") void clearDatasetGrants(long tenantId);
+    @Insert("INSERT INTO de_local_dataset_grant(tenant_id,dataset_id) VALUES(#{tenantId},#{datasetId})") void insertDatasetGrant(@Param("tenantId") long tenantId, @Param("datasetId") long datasetId);
     record ExportScopeRow(String taskId, Long userId, Long tenantId, String resourceType, Long resourceId) { }
     @Select("SELECT task_id,user_id,tenant_id,resource_type,resource_id FROM de_local_export_scope WHERE task_id=#{id}")
     ExportScopeRow exportScope(String id);
@@ -56,4 +70,7 @@ public interface LocalAccessMapper {
     @Select("SELECT COUNT(*) FROM de_local_dashboard_grant WHERE tenant_id=#{tenantId} AND resource_id=#{resourceId}") int hasGrant(@Param("tenantId") long tenantId, @Param("resourceId") long resourceId);
     @Select("SELECT scene_id FROM core_chart_view WHERE id=#{id}") Long chartResource(long id);
     @Select("SELECT table_id FROM core_chart_view WHERE id=#{id}") Long chartDataset(long id);
+    @Select("SELECT scene_id FROM core_chart_view WHERE id=#{id} UNION SELECT scene_id FROM snapshot_core_chart_view WHERE id=#{id}") List<Long> chartResources(long id);
+    @Select("SELECT node_type FROM data_visualization_info WHERE id=#{id} AND delete_flag=FALSE") String visualizationNodeType(long id);
+    @Select("SELECT chart_id FROM core_dataset_table_field WHERE id=#{id}") Long fieldChart(long id);
 }

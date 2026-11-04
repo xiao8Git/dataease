@@ -12,24 +12,93 @@ import {
   localDashboards,
   localGrants,
   saveLocalGrants,
+  localDatasets,
+  localDatasetGrants,
+  saveLocalDatasetGrants,
+  localDatasources,
+  localDatasourceGrants,
+  saveLocalDatasourceGrants,
+  localBranding,
+  uploadLocalLogo,
+  resetLocalLogo,
   type Tenant,
   type Role,
   type LocalUser,
   type Dashboard,
+  type DatasetResource,
+  type DatasourceResource,
   type Feature
 } from '@/api/localAccess'
+import { useAppearanceStoreWithOut } from '@/store/modules/appearance'
 
 const { t } = useI18n()
 const tenants = ref<Tenant[]>([])
 const roles = ref<Role[]>([])
 const users = ref<LocalUser[]>([])
 const dashboards = ref<Dashboard[]>([])
+const datasets = ref<DatasetResource[]>([])
+const datasetGrants = ref<string[]>([])
+const datasetGrantsLoaded = ref(false)
+const datasources = ref<DatasourceResource[]>([])
+const datasourceGrants = ref<string[]>([])
+const datasourceGrantsLoaded = ref(false)
 const selectedTenant = ref('')
 const grants = ref<string[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const dialog = ref('')
-const features: Feature[] = ['dashboard', 'dataset']
+const features: Feature[] = [
+  'dashboard',
+  'dashboard_edit',
+  'dashboard_delete',
+  'dataset',
+  'dataset_delete'
+]
+const logoInput = ref<HTMLInputElement>()
+const logoUrl = ref('')
+const logoBusy = ref(false)
+const appearance = useAppearanceStoreWithOut()
+const setLogo = (value: string) => {
+  logoUrl.value = value ? import.meta.env.VITE_API_BASEPATH + value : ''
+  appearance.localLogo = value
+}
+const changeLogo = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  logoBusy.value = true
+  try {
+    if (file.size > 2 * 1024 * 1024 || !['image/png', 'image/jpeg'].includes(file.type)) {
+      ElMessage.error(t('local_access.logo_help'))
+      return
+    }
+    const { data } = await uploadLocalLogo(file)
+    setLogo(data.logoUrl)
+    ElMessage.success(t('local_access.saved'))
+  } finally {
+    logoBusy.value = false
+    input.value = ''
+  }
+}
+const resetLogo = async () => {
+  logoBusy.value = true
+  try {
+    await resetLocalLogo()
+    setLogo('')
+    ElMessage.success(t('local_access.saved'))
+  } finally {
+    logoBusy.value = false
+  }
+}
+const permissionDisabled = (feature: Feature) =>
+  (['dashboard_edit', 'dashboard_delete'].includes(feature) &&
+    !roleForm.value.permissions.includes('dashboard')) ||
+  (feature === 'dataset_delete' && !roleForm.value.permissions.includes('dataset'))
+const normalizePermissions = () => {
+  roleForm.value.permissions = roleForm.value.permissions.filter(
+    feature => !permissionDisabled(feature)
+  )
+}
 const userRoles = ref<Role[]>([])
 let userRoleVersion = 0
 const loadUserRoles = async () => {
@@ -59,25 +128,44 @@ const loadTenant = async () => {
   roles.value = []
   users.value = []
   grants.value = []
+  datasetGrants.value = []
+  datasetGrantsLoaded.value = false
+  datasourceGrants.value = []
+  datasourceGrantsLoaded.value = false
   loading.value = true
   try {
-    const [d, u, g] = await Promise.all([
+    const [d, u, g, dg, sg] = await Promise.all([
       id ? localRoles(id) : Promise.resolve({ data: [] }),
       localUsers(id),
-      id ? localGrants(id) : Promise.resolve({ data: { resourceIds: [] } })
+      id ? localGrants(id) : Promise.resolve({ data: { resourceIds: [] } }),
+      id ? localDatasetGrants(id) : Promise.resolve({ data: { datasetIds: [] } }),
+      id ? localDatasourceGrants(id) : Promise.resolve({ data: { datasourceIds: [] } })
     ])
     if (version !== loadVersion) return
     roles.value = d.data
     users.value = u.data
     grants.value = g.data.resourceIds
+    datasetGrants.value = dg.data.datasetIds
+    datasetGrantsLoaded.value = !!id
+    datasourceGrants.value = sg.data.datasourceIds
+    datasourceGrantsLoaded.value = !!id
   } finally {
     if (version === loadVersion) loading.value = false
   }
 }
 const load = async () => {
-  const [ts, ds] = await Promise.all([localTenants(), localDashboards()])
+  const [ts, ds, sets, sources, branding] = await Promise.all([
+    localTenants(),
+    localDashboards(),
+    localDatasets(),
+    localDatasources(),
+    localBranding()
+  ])
+  setLogo(branding.data.logoUrl)
   tenants.value = ts.data
   dashboards.value = ds.data
+  datasets.value = sets.data
+  datasources.value = sources.data
   await loadTenant()
 }
 onMounted(load)
@@ -133,6 +221,26 @@ const saveAssignments = async () => {
     saving.value = false
   }
 }
+const saveDatasetAssignments = async () => {
+  if (!ready.value || !datasetGrantsLoaded.value || saving.value) return
+  saving.value = true
+  try {
+    await saveLocalDatasetGrants(selectedTenant.value, datasetGrants.value)
+    ElMessage.success(t('local_access.saved'))
+  } finally {
+    saving.value = false
+  }
+}
+const saveDatasourceAssignments = async () => {
+  if (!ready.value || !datasourceGrantsLoaded.value || saving.value) return
+  saving.value = true
+  try {
+    await saveLocalDatasourceGrants(selectedTenant.value, datasourceGrants.value)
+    ElMessage.success(t('local_access.saved'))
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 
 <template>
@@ -160,6 +268,27 @@ const saveAssignments = async () => {
             ></el-table-column
           >
         </el-table>
+      </el-tab-pane>
+      <el-tab-pane :label="t('local_access.branding')">
+        <h3>{{ t('local_access.logo') }}</h3>
+        <p class="description">{{ t('local_access.logo_help') }}</p>
+        <div class="logo-preview">
+          <img v-if="logoUrl" :src="logoUrl" :alt="t('local_access.logo')" />
+          <span v-else>DataEase</span>
+        </div>
+        <input
+          ref="logoInput"
+          type="file"
+          accept="image/png,image/jpeg"
+          hidden
+          @change="changeLogo"
+        />
+        <el-button type="primary" :loading="logoBusy" @click="logoInput?.click()">{{
+          t('local_access.upload_logo')
+        }}</el-button>
+        <el-button :disabled="logoBusy || !logoUrl" @click="resetLogo">{{
+          t('local_access.reset_logo')
+        }}</el-button>
       </el-tab-pane>
       <el-tab-pane :label="t('local_access.members_permissions')">
         <el-select
@@ -265,6 +394,58 @@ const saveAssignments = async () => {
             style="margin-left: 12px"
             >{{ t('local_access.save') }}</el-button
           >
+          <h3>{{ t('local_access.dataset_grants') }}</h3>
+          <p class="description">{{ t('local_access.dataset_grant_help') }}</p>
+          <el-select
+            v-model="datasetGrants"
+            multiple
+            filterable
+            clearable
+            :disabled="!ready || !datasetGrantsLoaded || saving"
+            style="width: min(720px, 100%)"
+            :placeholder="t('local_access.choose_datasets')"
+          >
+            <el-option
+              v-for="dataset in datasets"
+              :key="dataset.id"
+              :label="`${dataset.name} (${dataset.id})`"
+              :value="dataset.id"
+            />
+          </el-select>
+          <el-button
+            type="primary"
+            :disabled="!ready || !datasetGrantsLoaded"
+            :loading="saving"
+            @click="saveDatasetAssignments"
+            style="margin-left: 12px"
+            >{{ t('local_access.save') }}</el-button
+          >
+          <h3>{{ t('local_access.datasource_grants') }}</h3>
+          <p class="description">{{ t('local_access.datasource_grant_help') }}</p>
+          <el-select
+            v-model="datasourceGrants"
+            multiple
+            filterable
+            clearable
+            :disabled="!ready || !datasourceGrantsLoaded || saving"
+            style="width: min(720px, 100%)"
+            :placeholder="t('local_access.choose_datasources')"
+          >
+            <el-option
+              v-for="source in datasources"
+              :key="source.id"
+              :label="`${source.name} (${source.type}, ${source.id})`"
+              :value="source.id"
+            />
+          </el-select>
+          <el-button
+            type="primary"
+            :disabled="!ready || !datasourceGrantsLoaded"
+            :loading="saving"
+            @click="saveDatasourceAssignments"
+            style="margin-left: 12px"
+            >{{ t('local_access.save') }}</el-button
+          >
         </template>
       </el-tab-pane>
     </el-tabs>
@@ -295,10 +476,14 @@ const saveAssignments = async () => {
             ><el-input v-model="roleForm.name" maxlength="128"
           /></el-form-item>
           <el-form-item :label="t('local_access.features')"
-            ><el-checkbox-group v-model="roleForm.permissions"
-              ><el-checkbox v-for="feature in features" :key="feature" :label="feature">{{
-                t(`local_access.${feature}`)
-              }}</el-checkbox></el-checkbox-group
+            ><el-checkbox-group v-model="roleForm.permissions" @change="normalizePermissions"
+              ><el-checkbox
+                v-for="feature in features"
+                :key="feature"
+                :label="feature"
+                :disabled="permissionDisabled(feature)"
+                >{{ t(`local_access.${feature}`) }}</el-checkbox
+              ></el-checkbox-group
             ></el-form-item
           >
           <el-form-item :label="t('local_access.enabled')"
@@ -387,5 +572,24 @@ h3 {
 }
 .feature {
   margin-right: 8px;
+}
+.logo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 300px;
+  height: 100px;
+  padding: 16px;
+  border: 1px solid #dee0e3;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 28px;
+  font-weight: 600;
+  color: #3370ff;
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
 }
 </style>

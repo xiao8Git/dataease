@@ -53,6 +53,11 @@ import treeSort, { treeParentWeight } from '@/utils/treeSortUtils'
 import router from '@/router'
 import { cancelRequestBatch } from '@/config/axios/service'
 import { isFreeFolder } from '@/utils/utils'
+import { localAllows, useUserStoreWithOut } from '@/store/modules/user'
+const canCreate = computed(() => localAllows('dashboard_edit'))
+const canManageFolders = computed(
+  () => !useUserStoreWithOut().localAccess || useUserStoreWithOut().platformAdmin
+)
 const { wsCache } = useCache()
 
 const dvMainStore = dvMainStoreWithOut()
@@ -166,7 +171,7 @@ const resourceTypeList = computed(() => {
       command: 'newFolder'
     }
   ]
-  return list
+  return list.filter(item => canManageFolders.value || item.command === 'newLeaf')
 })
 const { handleDrop, allowDrop, handleDragStart } = treeDraggbleChart(
   state,
@@ -682,8 +687,9 @@ defineExpose({
     <div class="tree-header">
       <div class="icon-methods" v-show="showPosition === 'preview'">
         <span class="title"> {{ resourceLabel }} </span>
-        <div v-if="rootManage" class="flex-align-center">
+        <div v-if="rootManage && canCreate" class="flex-align-center">
           <el-tooltip
+            v-if="canManageFolders"
             offset="14"
             :content="t('work_branch.new_folder')"
             placement="top"
@@ -710,7 +716,10 @@ defineExpose({
                   </el-icon>
                   {{ t('work_branch.new_empty') }}
                 </el-dropdown-item>
-                <el-dropdown-item @click="addOperation('newFromTemplate', null, 'leaf', true)">
+                <el-dropdown-item
+                  v-if="canManageFolders"
+                  @click="addOperation('newFromTemplate', null, 'leaf', true)"
+                >
                   <el-icon class="handle-icon">
                     <Icon name="dv-use-template"><dvUseTemplate class="svg-icon" /></Icon>
                   </el-icon>
@@ -831,7 +840,7 @@ defineExpose({
             <div class="icon-more" v-if="data.weight >= 7 && showPosition === 'preview'">
               <el-icon
                 v-on:click.stop
-                v-if="data.leaf"
+                v-if="data.leaf && localAllows('dashboard_edit')"
                 class="hover-icon"
                 @click="resourceEdit(data.id)"
               >
@@ -844,7 +853,7 @@ defineExpose({
                 :menu-list="resourceTypeList"
                 :icon-name="icon_add_outlined"
                 placement="bottom-start"
-                v-if="!data.leaf"
+                v-if="!data.leaf && canCreate"
               ></handle-more>
               <dv-handle-more
                 @handle-command="cmd => operation(cmd, data, data.leaf ? 'leaf' : 'folder')"

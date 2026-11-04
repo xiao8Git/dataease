@@ -25,8 +25,10 @@ public class LocalChartGuard {
                     if (Boolean.TRUE.equals(view.getIsPlugin())) throw new SecurityException("本地租户模式暂不支持插件图表");
                 }
                 if (argument instanceof ChartViewDTO view) {
-                    manage.requireChart(view.getId(), view.getTableId());
-                    if (view.getSceneId() != null) manage.requireDashboard(view.getSceneId());
+                    var user = LocalAccessContext.require();
+                    if (!user.admin() && user.permits("dashboard_edit")) manage.requireChartPreview(view);
+                    else manage.requireChart(view.getId(), view.getTableId());
+                    if (view.getSceneId() != null && view.getSceneId() > 0) manage.requireDashboard(view.getSceneId());
                     if (Boolean.TRUE.equals(view.getIsPlugin())) throw new SecurityException("本地租户模式暂不支持插件图表");
                 }
             }

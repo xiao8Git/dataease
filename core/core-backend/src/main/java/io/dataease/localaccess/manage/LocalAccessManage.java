@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class LocalAccessManage implements LocalIdentityProvider, ApplicationRunner {
-    public static final Set<String> FEATURES = Set.of("dashboard", "dataset");
+    public static final Set<String> FEATURES = Set.of("dashboard", "dataset", "dashboard_edit", "dashboard_delete", "dataset_delete");
     private static final String ISSUER = "dataease-local-access";
     private final LocalAccessMapper mapper;
     private final boolean enabled;
@@ -167,6 +167,9 @@ public class LocalAccessManage implements LocalIdentityProvider, ApplicationRunn
         requireAdmin();
         if (dto.tenantId() == null || mapper.tenant(dto.tenantId()) == null) throw new IllegalArgumentException("租户不存在");
         if (dto.permissions() == null || !FEATURES.containsAll(dto.permissions())) throw new IllegalArgumentException("无效功能权限");
+        if ((dto.permissions().contains("dashboard_edit") || dto.permissions().contains("dashboard_delete")) && !dto.permissions().contains("dashboard")
+                || dto.permissions().contains("dataset_delete") && !dto.permissions().contains("dataset"))
+            throw new IllegalArgumentException("请同时选择对应的仪表板或数据集功能权限");
         DepartmentRow row = new DepartmentRow(); row.setId(dto.id() == null ? IDUtils.snowID() : dto.id());
         row.setTenantId(dto.tenantId()); row.setName(name(dto.name())); row.setEnabled(dto.enabled());
         row.setPermissions(String.join(",", new TreeSet<>(dto.permissions())));
@@ -210,14 +213,175 @@ public class LocalAccessManage implements LocalIdentityProvider, ApplicationRunn
         if (!user.permits("dashboard") || resourceId == null || mapper.hasGrant(user.tenantId(), resourceId) != 1)
             throw new SecurityException("当前租户无权访问该看板");
     }
+    public List<DatasetResource> datasets() { requireAdmin(); return mapper.datasets(); }
+    public List<DatasourceResource> datasources() { requireAdmin(); return mapper.datasources(); }
+    public DatasourceGrant datasourceGrants(long tenantId) {
+        requireAdmin();
+        if (mapper.tenant(tenantId) == null) throw new IllegalArgumentException("租户不存在");
+        return new DatasourceGrant(tenantId, mapper.datasourceGrants(tenantId));
+    }
+    @Transactional public void saveDatasourceGrants(DatasourceGrant grant) {
+        requireAdmin();
+        if (grant.tenantId() == null || mapper.tenant(grant.tenantId()) == null || grant.datasourceIds() == null)
+            throw new IllegalArgumentException("租户和数据源列表不能为空");
+        Set<Long> valid = new HashSet<>(); mapper.datasources().forEach(source -> valid.add(source.id()));
+        if (!valid.containsAll(grant.datasourceIds())) throw new IllegalArgumentException("数据源不存在");
+        mapper.clearDatasourceGrants(grant.tenantId());
+        new HashSet<>(grant.datasourceIds()).forEach(id -> mapper.insertDatasourceGrant(grant.tenantId(), id));
+    }
+    public void requireDatasource(Long datasourceId) {
+        var user = LocalAccessContext.require();
+        if (user.admin()) return;
+        user.requireTenant();
+        if (datasourceId == null || datasourceId <= 0) throw new SecurityException("数据源不存在或无访问权限");
+        var source = mapper.datasource(datasourceId);
+        if (source == null || "folder".equals(source.type())) throw new SecurityException("数据源不存在或无访问权限");
+        var selected = mapper.datasourceGrants(user.tenantId());
+        if (!selected.isEmpty() && !selected.contains(datasourceId)) throw new SecurityException("数据源不存在或无访问权限");
+    }
+    public void requireDatasetSources(io.dataease.api.dataset.union.DatasetGroupInfoDTO dataset) {
+        requireUnionSources(dataset.getUnion());
+    }
+    private void requireUnionSources(List<io.dataease.api.dataset.union.UnionDTO> nodes) {
+        if (nodes == null) return;
+        for (var node : nodes) {
+            if (node.getCurrentDs() != null) requireDatasource(node.getCurrentDs().getDatasourceId());
+            requireUnionSources(node.getChildrenDs());
+        }
+    }
+    public DatasetGrant datasetGrants(long tenantId) {
+        requireAdmin();
+        if (mapper.tenant(tenantId) == null) throw new IllegalArgumentException("租户不存在");
+        return new DatasetGrant(tenantId, mapper.datasetGrants(tenantId));
+    }
+    @Transactional public void saveDatasetGrants(DatasetGrant grant) {
+        requireAdmin();
+        if (grant.tenantId() == null || mapper.tenant(grant.tenantId()) == null || grant.datasetIds() == null)
+            throw new IllegalArgumentException("租户和数据集列表不能为空");
+        Set<Long> valid = new HashSet<>(); mapper.datasets().forEach(dataset -> valid.add(dataset.id()));
+        if (!valid.containsAll(grant.datasetIds())) throw new IllegalArgumentException("数据集不存在");
+        mapper.clearDatasetGrants(grant.tenantId());
+        new HashSet<>(grant.datasetIds()).forEach(id -> mapper.insertDatasetGrant(grant.tenantId(), id));
+    }
+    public LocalAccessMapper.DatasetRow requireDataset(Long datasetId) {
+        var user = LocalAccessContext.require();
+        if (datasetId == null) throw new SecurityException("数据集不存在或无访问权限");
+        var dataset = mapper.dataset(datasetId);
+        if (dataset == null) throw new SecurityException("数据集不存在或无访问权限");
+        if (!user.admin()) {
+            user.requireTenant();
+            List<Long> selected = mapper.datasetGrants(user.tenantId());
+            if (!visibleDataset(dataset, selected, user.userId())) throw new SecurityException("数据集不存在或无访问权限");
+            if (!mapper.datasourceGrants(user.tenantId()).isEmpty())
+                mapper.datasetDatasourceIds(datasetId).forEach(this::requireDatasource);
+        }
+        return dataset;
+    }
+    private boolean visibleDataset(LocalAccessMapper.DatasetRow dataset, List<Long> selected, long userId) {
+        return "folder".equals(dataset.nodeType()) || selected.isEmpty() || selected.contains(dataset.id())
+                || Long.toString(userId).equals(dataset.createBy());
+    }
+    public void requireDatasetDeletion(Long datasetId) {
+        var identity = LocalAccessContext.require();
+        if (!identity.permits("dataset") || !identity.permits("dataset_delete")) throw new SecurityException("当前角色无权删除数据集");
+        requireDataset(datasetId);
+        var user = LocalAccessContext.require();
+        if (user.admin()) return;
+        List<Long> selected = mapper.datasetGrants(user.tenantId());
+        if (selected.isEmpty()) return;
+        var nodes = mapper.datasetNodes();
+        Set<Long> descendants = new HashSet<>(Set.of(datasetId));
+        boolean changed;
+        do {
+            changed = false;
+            for (var node : nodes) {
+                if (descendants.contains(node.pid()) && descendants.add(node.id())) changed = true;
+            }
+        } while (changed);
+        for (var node : nodes) {
+            if (descendants.contains(node.id()) && !visibleDataset(node, selected, user.userId()))
+                throw new SecurityException("文件夹包含无访问权限的数据集，不能删除");
+        }
+    }
+    public void requireDatasetField(Long fieldId) {
+        if (fieldId != null) {
+            Long datasetId = mapper.fieldDataset(fieldId);
+            if (datasetId != null) requireDataset(datasetId);
+        }
+    }
     public void requireChart(Long chartId, Long datasetId) {
         if (chartId == null) throw new SecurityException("图表不存在");
         requireDashboard(mapper.chartResource(chartId));
         if (datasetId != null && !datasetId.equals(mapper.chartDataset(chartId))) throw new SecurityException("图表数据集不匹配");
+        if (datasetId != null) requireDataset(datasetId);
+    }
+    public void requireDashboardOperation(Long resourceId, String permission) {
+        var user = LocalAccessContext.require();
+        if (!user.permits("dashboard") || !user.permits(permission)) throw new SecurityException("当前角色无权执行此仪表板操作");
+        requireDashboard(resourceId);
+    }
+    public void requireEditableChart(io.dataease.extensions.view.dto.ChartViewDTO view) {
+        requireDashboardOperation(view.getSceneId(), "dashboard_edit");
+        if (view.getId() != null) {
+            for (Long owner : mapper.chartResources(view.getId())) {
+                if (!owner.equals(view.getSceneId())) throw new SecurityException("图表不属于当前仪表板");
+            }
+        }
+        if (view.getTableId() != null) requireDataset(view.getTableId());
+        if (Boolean.TRUE.equals(view.getIsPlugin())) throw new SecurityException("本地租户模式暂不支持插件图表");
+    }
+    public void requireDashboardEditor() {
+        var user = LocalAccessContext.require(); user.requireTenant();
+        if (!user.permits("dashboard") || !user.permits("dashboard_edit")) throw new SecurityException("当前角色无权编辑或新建仪表板");
+    }
+    public void requireDashboardCreation(io.dataease.api.visualization.request.DataVisualizationBaseRequest request) {
+        requireDashboardEditor();
+        if (request.getId() != null || "copy".equals(request.getOptType()) || request.getAppData() != null
+                || request.getNodeType() != null && !"leaf".equals(request.getNodeType())
+                || request.getType() == null || !Set.of("dashboard", "dataV").contains(request.getType()))
+            throw new SecurityException("当前角色仅可新建仪表板或大屏");
+        if (request.getPid() != null && request.getPid() != 0L && !"folder".equals(mapper.visualizationNodeType(request.getPid())))
+            throw new SecurityException("目标文件夹不存在");
+        if (request.getCanvasViewInfo() != null) {
+            for (var view : request.getCanvasViewInfo().values()) requireDraftChart(view);
+        }
+    }
+    public void requireDraftChart(io.dataease.extensions.view.dto.ChartViewDTO view) {
+        requireDashboardEditor();
+        if (view.getId() != null && !mapper.chartResources(view.getId()).isEmpty()) throw new SecurityException("不能使用其他仪表板的图表 ID");
+        if (view.getTableId() != null) requireDataset(view.getTableId());
+        if (Boolean.TRUE.equals(view.getIsPlugin())) throw new SecurityException("本地租户模式暂不支持插件图表");
+    }
+    public void requireChartPreview(io.dataease.extensions.view.dto.ChartViewDTO view) {
+        if (view.getSceneId() == null || view.getSceneId() <= 0) {
+            var owners = view.getId() == null ? List.<Long>of() : mapper.chartResources(view.getId());
+            if (owners.isEmpty()) requireDraftChart(view);
+            else {
+                for (Long owner : owners) requireDashboardOperation(owner, "dashboard_edit");
+                if (view.getTableId() != null) requireDataset(view.getTableId());
+                if (Boolean.TRUE.equals(view.getIsPlugin())) throw new SecurityException("本地租户模式暂不支持插件图表");
+            }
+        }
+        else requireEditableChart(view);
+    }
+    public void requireChartEdit(Long chartId) {
+        requireDashboardEditor();
+        if (chartId == null) throw new SecurityException("图表不存在");
+        var resources = mapper.chartResources(chartId);
+        if (resources.isEmpty()) throw new SecurityException("请先保存仪表板后再修改计算字段");
+        for (Long resourceId : resources) requireDashboardOperation(resourceId, "dashboard_edit");
+    }
+    public void requireChartFieldEdit(Long fieldId) {
+        Long chartId = fieldId == null ? null : mapper.fieldChart(fieldId);
+        if (chartId == null || chartId <= 0) throw new SecurityException("不能修改数据集原始字段");
+        requireChartEdit(chartId);requireDatasetField(fieldId);
+    }
+    public void requireExistingChartFieldEdit(Long fieldId) {
+        if (fieldId != null && mapper.fieldDataset(fieldId) != null) requireChartFieldEdit(fieldId);
     }
     public void createdDashboard(long resourceId, String nodeType) {
         if (LocalAccessContext.get() == null || !"leaf".equals(nodeType)) return;
-        requireAdmin(); var user = LocalAccessContext.require(); user.requireTenant();
+        requireDashboardEditor(); var user = LocalAccessContext.require();
         mapper.insertGrant(user.tenantId(), resourceId);
     }
 }

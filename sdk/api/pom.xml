@@ -30,6 +30,8 @@
             <groupId>io.dataease</groupId>
             <artifactId>dataease-license-sdk</artifactId>
             <version>${project.version}</version>
+            <scope>system</scope>
+            <systemPath>/Users/xiao8/wd/ws/dataease/lib/dataease-license-sdk-2.10.27.jar</systemPath>
         </dependency>
 
         <dependency>

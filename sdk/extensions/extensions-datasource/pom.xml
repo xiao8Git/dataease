@@ -34,6 +34,19 @@
             <artifactId>jsch</artifactId>
             <version>${jsch.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+<!--        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>-->
     </dependencies>
 
     <properties>
@@ -42,11 +55,4 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>fit2cloud-public</id>
-            <name>Fit2cloud Public</name>
-            <url>https://repository.fit2cloud.com/repository/fit2cloud-public/</url>
-        </repository>
-    </repositories>
 </project>

@@ -8,6 +8,7 @@ import ShareHandler from '@/views/share/share/ShareHandler.vue'
 import { useShareStoreWithOut } from '@/store/modules/share'
 import { isDesktop } from '@/utils/ModelUtil'
 import { useI18n } from '@/hooks/web/useI18n'
+import { localAllows, useUserStoreWithOut } from '@/store/modules/user'
 const shareStore = useShareStoreWithOut()
 const { t } = useI18n()
 
@@ -41,7 +42,7 @@ const props = defineProps({
 })
 
 const shareDisable = computed(() => {
-  return shareStore.getShareDisable || isDesktop()
+  return shareStore.getShareDisable || isDesktop() || useUserStoreWithOut().localAccess
 })
 
 const shareComponent = ref(null)
@@ -53,6 +54,15 @@ const menus = ref([
     return item
   })
 ])
+const visibleMenus = computed(() =>
+  menus.value.filter(item => {
+    const user = useUserStoreWithOut()
+    if (!user.localAccess || user.platformAdmin) return true
+    if (!props.node.leaf) return false
+    if (item.command === 'delete') return localAllows('dashboard_delete')
+    return ['cancelPublish', 'rename'].includes(item.command) && localAllows('dashboard_edit')
+  })
+)
 const handleCommand = (command: string | number | object) => {
   if (command === 'share') {
     shareComponent.value.execute()
@@ -77,6 +87,7 @@ const menuDisabledCheck = ele => {
 
 <template>
   <el-dropdown
+    v-if="visibleMenus.length"
     popper-class="menu-more-dv_popper"
     :placement="placement"
     trigger="click"
@@ -90,7 +101,7 @@ const menuDisabledCheck = ele => {
         <el-dropdown-item
           :divided="ele.divided"
           :command="ele.command"
-          v-for="ele in menus"
+          v-for="ele in visibleMenus"
           :key="ele.label"
           :disabled="menuDisabledCheck(ele)"
           :class="{

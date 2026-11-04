@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localAllows } from '@/store/modules/user'
 import dvBatch from '@/assets/svg/dv-batch.svg'
 import dvDashboard from '@/assets/svg/dv-dashboard.svg'
 import dvHidden from '@/assets/svg/dv-hidden.svg'
@@ -725,7 +726,7 @@ const initOpenHandler = newWindow => {
 
         <el-button
           class="custom-normal-button"
-          v-if="editMode === 'preview'"
+          v-if="editMode === 'preview' && localAllows('dashboard_edit')"
           icon="EditPen"
           @click="edit()"
           type="primary"

@@ -14,7 +14,6 @@ import { Icon } from '@/components/icon-custom'
 import SystemCfg from './SystemCfg.vue'
 import ToolboxCfg from './ToolboxCfg.vue'
 import { useRouter, useRoute } from 'vue-router_2'
-import TopDoc from '@/layout/components/TopDoc.vue'
 import AccountOperator from '@/layout/components/AccountOperator.vue'
 import { isDesktop } from '@/utils/ModelUtil'
 import { XpackComponent } from '@/components/plugin'
@@ -188,8 +187,6 @@ onMounted(() => {
         class="ai-icon-tips"
       />
       <ToolboxCfg v-if="showToolbox" />
-      <TopDoc v-if="appearanceStore.getShowDoc" />
-      <i v-else style="width: 10px; height: 24px"></i>
       <el-tooltip
         v-if="showMsg"
         effect="dark"
@@ -299,6 +296,12 @@ onMounted(() => {
   height: 34px;
   margin-right: 48px;
   color: #ffffff;
+}
+img.logo {
+  object-fit: contain;
+  background: #fff;
+  padding: 3px;
+  border-radius: 3px;
 }
 </style>
 
